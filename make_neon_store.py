@@ -341,6 +341,117 @@ PRINT_VIEW = {
 cfg["views"] = [v for v in cfg["views"] if v.get("path") != "printing"]
 cfg["views"].append(PRINT_VIEW)
 
+# ---------------------------------------------------- say-it view: voice intents
+# Panel, not sections: same iframe-squeeze lesson as the chores page.
+VOICE_VIEW = {
+    "title": "Say It", "path": "voice", "subview": True,
+    "icon": "mdi:microphone", "theme": "YOUR_THEME", "type": "panel",
+    "cards": [{"type": "vertical-stack", "cards": [
+        {"type": "iframe", "url": "/local/voice.html?v=%d" % V,
+         "card_mod": {"style":
+             "ha-card{height:calc(100vh - 10px)!important;border:none!important;"
+             "background:transparent!important;border-radius:0!important;box-shadow:none!important;}"
+             "#root{height:100%!important;padding-top:0!important;}"
+             "iframe{height:100%!important;width:100%!important;}"}},
+        {"type": "custom:button-card", "name": "Back to Home", "icon": "mdi:home",
+         "tap_action": {"action": "navigate", "navigation_path": "/el-dashboardio/0"}},
+    ]}],
+}
+
+cfg["views"] = [v for v in cfg["views"] if v.get("path") != "voice"]
+cfg["views"].append(VOICE_VIEW)
+
+# ---------------------------------------------------- family map: big + neon
+# The stock map card sits in a ~280px box. Panel mode plus an explicit height
+# hands it the screen; the tile pane is inverted into a dark map so it belongs
+# on a neon board instead of glowing white in the middle of it.
+FAMILY = [("device_tracker.life360_dad", "Dad", "#a855f7"),
+          ("device_tracker.life360_mom", "Mom", "#f472b6"),
+          ("device_tracker.life360_ian", "Ian", "#22d3ee"),
+          ("device_tracker.life360_evan", "Evan", "#22c55e"),
+          ("device_tracker.life360_colin", "Colin", "#facc15")]
+
+MAP_INNER = (
+    "#map{background:#070b1c!important;}"
+    ".leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(0.72) "
+    "contrast(1.22) saturate(0.55);}"
+    ".leaflet-marker-icon{filter:drop-shadow(0 0 7px rgba(34,211,238,0.85));}"
+    ".leaflet-bar a{background:#0d142c!important;color:#7ee7f7!important;"
+    "border-color:rgba(34,211,238,0.35)!important;}"
+    ".leaflet-control-attribution{background:rgba(7,11,28,0.65)!important;"
+    "color:#5b6b8c!important;font-size:9px!important;}"
+    ".leaflet-control-attribution a{color:#7ee7f7!important;}")
+
+
+def neon_map(height):
+    return {
+        "type": "map", "entities": [e for e, _, _ in FAMILY], "auto_fit": True,
+        "hours_to_show": 2, "theme_mode": "dark",
+        "card_mod": {"style": {
+            ".": "ha-card{height:%s!important;border:1px solid rgba(34,211,238,0.55)!important;"
+                 "border-radius:18px!important;overflow:hidden!important;"
+                 "background:#070b1c!important;"
+                 "box-shadow:0 0 24px rgba(34,211,238,0.30),0 10px 30px rgba(0,0,0,0.55)!important;}"
+                 % height,
+            "ha-map$": MAP_INNER,
+            "ha-card ha-map$": MAP_INNER}}}
+
+
+def who_chip(entity, name, color):
+    js = ("""[[[
+  var s = states['%s'];
+  var raw = s ? s.state : 'unknown';
+  var loc = raw === 'home' ? 'Home' : (raw === 'not_home' ? 'Away'
+            : raw.charAt(0).toUpperCase() + raw.slice(1));
+  var away = raw !== 'home';
+  var mins = s ? Math.round((Date.now() - new Date(s.last_changed).getTime()) / 60000) : 0;
+  var ago = mins < 1 ? 'just now' : (mins < 60 ? mins + 'm' : (mins < 1440
+            ? Math.round(mins / 60) + 'h' : Math.round(mins / 1440) + 'd'));
+  var b = s && s.attributes.battery_level != null ? s.attributes.battery_level
+          : (s && s.attributes.battery != null ? s.attributes.battery : null);
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
+   + '<div style="font-size:13px;font-weight:900;letter-spacing:.6px;color:%s;'
+   + 'text-shadow:0 0 10px %s;">' + '%s'.toUpperCase() + '</div>'
+   + '<div style="font-size:15px;font-weight:800;color:' + (away ? '#eaf0fa' : '#8ef2dd')
+   + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%%;">'
+   + loc + '</div>'
+   + '<div style="font-size:10.5px;font-weight:700;color:#8195b5;">' + ago
+   + (b != null ? ' \\u00b7 ' + Math.round(b) + '%%' : '') + '</div>'
+   + '</div>';
+]]]""" % (entity, color, color, name))
+    return {"type": "custom:button-card", "entity": entity,
+            "show_icon": False, "show_name": False, "show_state": False,
+            "tap_action": {"action": "more-info"},
+            "custom_fields": {"w": js},
+            "styles": {"card": [{"background": "rgba(13,20,44,0.82)"},
+                                {"border": "1px solid %s55" % color},
+                                {"border-radius": "14px"},
+                                {"box-shadow": "0 0 14px %s33" % color},
+                                {"height": "74px"}, {"padding": "6px 4px"},
+                                {"margin": "0 3px"}],
+                       "grid": [{"grid-template-areas": '"w"'},
+                                {"grid-template-columns": "1fr"},
+                                {"align-items": "center"}],
+                       "custom_fields": {"w": [{"width": "100%"},
+                                               {"white-space": "normal"}]}}}
+
+
+FAMILY_CARDS = [
+    {"type": "horizontal-stack", "cards": [who_chip(*p) for p in FAMILY]},
+    neon_map("calc(100vh - 190px)"),
+    pinned({}),
+]
+
+for v in cfg["views"]:
+    if v.get("path") == "family-view":
+        v.pop("sections", None)
+        v["type"] = "panel"
+        v["cards"] = [{"type": "vertical-stack", "cards": FAMILY_CARDS}]
+    elif v.get("path") == "family-map":
+        v["type"] = "panel"
+        v["cards"] = [{"type": "vertical-stack",
+                       "cards": [neon_map("calc(100vh - 80px)"), pinned({})]}]
+
 # ---------------------------------------------------- lighting view: night-house
 # Replaces the old isometric lighting page with the live neon floorplan card
 # (renders the family's saved layout from the addon's /floorplan store).

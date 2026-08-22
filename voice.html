@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Say It</title>
+<style>
+  body { font-family:'Segoe UI',Roboto,sans-serif; margin:0; color:#eaf0fa;
+         background:#070b1c;
+         background-image:radial-gradient(900px 500px at 20% -10%, rgba(34,211,238,.16), transparent 60%),
+                          radial-gradient(800px 600px at 110% 20%, rgba(168,85,247,.13), transparent 60%),
+                          radial-gradient(900px 500px at 60% 110%, rgba(34,197,94,.08), transparent 60%);
+         background-attachment:fixed; }
+  .hdr { display:flex; align-items:center; gap:12px; padding:14px 16px;
+         border-bottom:1px solid rgba(34,211,238,.30); }
+  .hdr .title { font-size:20px; font-weight:800; flex:1; letter-spacing:.4px;
+                text-shadow:0 0 12px rgba(34,211,238,.6); }
+  .wrap { padding:18px 16px 26px; max-width:760px; margin:0 auto; }
+
+  .mic { display:block; margin:10px auto 4px; width:150px; height:150px; border-radius:50%;
+         background:radial-gradient(circle at 50% 35%, rgba(34,211,238,.30), rgba(13,20,44,.9));
+         border:2px solid rgba(34,211,238,.65); color:#7ee7f7; font-size:62px; cursor:pointer;
+         box-shadow:0 0 26px rgba(34,211,238,.35), inset 0 0 30px rgba(34,211,238,.12);
+         transition:transform .12s ease; }
+  .mic:active { transform:scale(.96); }
+  .mic.on { border-color:rgba(244,114,182,.9); color:#fbcfe8; animation:pulse 1.1s infinite;
+            background:radial-gradient(circle at 50% 35%, rgba(244,114,182,.34), rgba(13,20,44,.9)); }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 22px rgba(244,114,182,.35), inset 0 0 30px rgba(244,114,182,.12);}
+                     50%{box-shadow:0 0 46px rgba(244,114,182,.75), inset 0 0 40px rgba(244,114,182,.25);} }
+  .hint { text-align:center; font-size:13px; color:#9fb2d0; margin:2px 0 14px; letter-spacing:.3px; }
+
+  .row { display:flex; gap:10px; }
+  .row input { flex:1; background:#0a1226; border:2px solid rgba(34,211,238,.4); color:#eaf0fa;
+               border-radius:12px; padding:14px 14px; font-size:17px; outline:none; }
+  .row input:focus { border-color:rgba(34,211,238,.8); box-shadow:0 0 14px rgba(34,211,238,.25); }
+  .row button { background:rgba(34,211,238,.2); color:#7ee7f7; border:1px solid rgba(34,211,238,.6);
+                border-radius:12px; padding:0 20px; font-size:17px; font-weight:800; cursor:pointer;
+                box-shadow:0 0 12px rgba(34,211,238,.3); }
+
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px; }
+  .chip { background:rgba(13,20,44,.8); border:1px solid rgba(168,85,247,.42); color:#d8c7f5;
+          border-radius:20px; padding:7px 13px; font-size:12.5px; cursor:pointer; }
+  .chip:active { background:rgba(168,85,247,.18); }
+
+  .out { margin:18px 0 6px; padding:16px 18px; border-radius:16px; min-height:26px;
+         background:rgba(13,20,44,.82); border:1px solid rgba(96,165,250,.20);
+         box-shadow:0 4px 18px rgba(0,0,0,.45); font-size:17px; font-weight:700; line-height:1.45; }
+  .out.ok { border-color:rgba(45,212,191,.6); color:#8ef2dd;
+            box-shadow:0 0 18px rgba(45,212,191,.22), 0 4px 18px rgba(0,0,0,.45); }
+  .out.bad { border-color:rgba(244,114,182,.6); color:#ffc7e2;
+             box-shadow:0 0 18px rgba(244,114,182,.22), 0 4px 18px rgba(0,0,0,.45); }
+  .out .heard { display:block; font-size:12.5px; font-weight:600; color:#8195b5; margin-bottom:6px;
+                letter-spacing:.3px; }
+
+  .head { margin:22px 0 8px; font-size:12px; letter-spacing:1px; font-weight:900; color:#5eead4;
+          text-shadow:0 0 8px rgba(45,212,191,.5); }
+  .log { display:flex; flex-direction:column; gap:7px; }
+  .le { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:11px;
+        background:rgba(13,20,44,.72); border:1px solid rgba(96,165,250,.15); font-size:13.5px; }
+  .le .dot { width:9px; height:9px; border-radius:50%; flex:none; background:#2dd4bf;
+             box-shadow:0 0 8px rgba(45,212,191,.7); }
+  .le.bad .dot { background:#f472b6; box-shadow:0 0 8px rgba(244,114,182,.7); }
+  .le .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .le .src { font-size:10.5px; font-weight:800; letter-spacing:.5px; color:#9fb2d0;
+             border:1px solid rgba(96,165,250,.3); border-radius:14px; padding:2px 8px; flex:none; }
+  .le .when { font-size:11px; color:#8195b5; flex:none; }
+</style>
+</head>
+<body>
+<div class="hdr"><div class="title">🎙️ Say It</div></div>
+<div class="wrap">
+  <button class="mic" id="mic" title="Tap and speak">🎤</button>
+  <div class="hint" id="hint">Tap the mic, or type it below</div>
+
+  <div class="row">
+    <input id="box" placeholder="add butter to the kroger list" autocomplete="off">
+    <button id="go">Send</button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <div class="out" id="out">Say a list item or an appointment — it goes straight into Cozi.</div>
+
+  <div class="head">RECENT</div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+let API = 'http://' + location.hostname + ':5000';
+const API_FALLBACK = 'http://YOUR_HA_IP:5000';   // opened from a PC, not the tablet
+
+const EXAMPLES = [
+  'add butter to the kroger list',
+  'add milk, eggs and paper towels to the kroger list',
+  'put a 2x4 and wood screws on the home depot list',
+  'add rotisserie chicken to the costco list',
+  "create an appointment for Evan monday at 7pm description pick up his laundry",
+  'add an event for Ian tomorrow at 4:30 pm called football practice',
+];
+
+const $ = id => document.getElementById(id);
+
+async function post(path, body) {
+  const opts = {method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(body)};
+  try {
+    return await (await fetch(API + path, opts)).json();
+  } catch (e) {
+    if (API !== API_FALLBACK) { API = API_FALLBACK; return await (await fetch(API + path, opts)).json(); }
+    throw e;
+  }
+}
+
+function show(said, res) {
+  const el = $('out');
+  el.className = 'out ' + (res && res.ok ? 'ok' : 'bad');
+  el.innerHTML = '<span class="heard">“' + said.replace(/</g,'&lt;') + '”</span>'
+               + ((res && res.speech) || 'Something went wrong.');
+  speak((res && res.speech) || '');
+  loadLog();
+}
+
+// Read the confirmation back, so it works the same hands-free as it does by hand.
+function speak(text) {
+  try {
+    if (!text || !window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.02; u.pitch = 1;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+async function send(said) {
+  said = (said || '').trim();
+  if (!said) return;
+  $('out').className = 'out';
+  $('out').textContent = 'Working…';
+  try {
+    show(said, await post('/voice/intent', {text: said, source: 'dashboard'}));
+  } catch (e) {
+    show(said, {ok:false, speech:'Could not reach the chores service.'});
+  }
+  $('box').value = '';
+}
+
+$('go').onclick = () => send($('box').value);
+$('box').addEventListener('keydown', e => { if (e.key === 'Enter') send($('box').value); });
+
+EXAMPLES.forEach(x => {
+  const c = document.createElement('div');
+  c.className = 'chip'; c.textContent = x;
+  c.onclick = () => { $('box').value = x; $('box').focus(); };
+  $('chips').appendChild(c);
+});
+
+// ---- speech input. WebView needs the mic permission granted to Fully Kiosk;
+// if the browser has no recogniser at all we just leave the typing box.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+if (!SR) {
+  $('mic').style.opacity = .35;
+  $('hint').textContent = 'This browser has no microphone support — type it instead';
+} else {
+  rec = new SR();
+  rec.lang = 'en-US'; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+  rec.onstart = () => { listening = true; $('mic').classList.add('on'); $('hint').textContent = 'Listening…'; };
+  rec.onerror = e => { $('hint').textContent = e.error === 'not-allowed'
+      ? 'Microphone blocked — allow it for this page' : 'Didn’t catch that, try again'; };
+  rec.onend = () => { listening = false; $('mic').classList.remove('on');
+                      if ($('hint').textContent === 'Listening…') $('hint').textContent = 'Tap the mic, or type it below'; };
+  rec.onresult = e => {
+    let said = '', done = false;
+    for (const r of e.results) { said += r[0].transcript; if (r.isFinal) done = true; }
+    $('box').value = said;
+    if (done) { $('hint').textContent = 'Tap the mic, or type it below'; send(said); }
+  };
+  $('mic').onclick = () => {
+    if (listening) { rec.stop(); return; }
+    try { rec.start(); } catch (e) { /* already starting */ }
+  };
+}
+
+function ago(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  if (mins < 1440) return Math.round(mins / 60) + 'h ago';
+  return d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+
+async function loadLog() {
+  let d;
+  try {
+    d = await (await fetch(API + '/voice/log')).json();
+  } catch (e) {
+    try { API = API_FALLBACK; d = await (await fetch(API + '/voice/log')).json(); }
+    catch (e2) { return; }
+  }
+  const log = (d.log || []).slice(-12).reverse();
+  $('log').innerHTML = log.map(e =>
+    '<div class="le' + (e.ok ? '' : ' bad') + '">'
+    + '<div class="dot"></div>'
+    + '<div class="t">' + (e.text || '').replace(/</g,'&lt;') + '</div>'
+    + '<div class="src">' + (e.source || '').toUpperCase() + '</div>'
+    + '<div class="when">' + ago(e.at) + '</div></div>').join('')
+    || '<div class="le"><div class="t" style="color:#8195b5">Nothing yet.</div></div>';
+}
+loadLog();
+setInterval(loadLog, 30000);
+</script>
+</body>
+</html>

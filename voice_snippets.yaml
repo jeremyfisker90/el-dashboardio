@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------- voice intents
+# Every voice front door lands on the add-on's /voice/intent, which parses the
+# sentence and writes it into Cozi. The add-on returns the sentence to speak
+# back, so Assist answers with what actually happened, not a canned "OK".
+rest_command:
+  voice_intent:
+    url: "http://YOUR_HA_IP:5000/voice/intent"
+    method: POST
+    content_type: "application/json"
+    payload: '{"text": {{ text | to_json }}, "source": {{ (source | default("assist")) | to_json }}}'
+    timeout: 20
+
+intent_script:
+  CoziAddToList:
+    action:
+      - action: rest_command.voice_intent
+        data:
+          text: "add {{ item }} to the {{ listname }} list"
+          source: assist
+        response_variable: r
+      - stop: "done"
+        response_variable: r
+    speech:
+      text: >-
+        {% set c = action_response.content | default({}) %}
+        {{ c.speech if c.speech is defined
+           else 'Added ' ~ item ~ ' to the ' ~ listname ~ ' list.' }}
+  CoziAddAppointment:
+    action:
+      - action: rest_command.voice_intent
+        data:
+          text: "create an appointment {{ details }}"
+          source: assist
+        response_variable: r
+      - stop: "done"
+        response_variable: r
+    speech:
+      text: >-
+        {% set c = action_response.content | default({}) %}
+        {{ c.speech if c.speech is defined else 'Added it to the Cozi calendar.' }}

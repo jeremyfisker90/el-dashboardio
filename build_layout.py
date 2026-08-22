@@ -706,6 +706,8 @@ ROWS = [
                   entity="sensor.x2d_20p6aj631801302_print_status",
                   triggers=["sensor.x2d_20p6aj631801302_print_progress",
                             "sensor.x2d_20p6aj631801302_remaining_time"]),
+        # opens its own listening popup rather than navigating away
+        {"type": "custom:voice-mic-card", "name": "Say It"},
     ]},
 ]
 

@@ -57,6 +57,7 @@ class NeonFloorplanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (this._panelRoom) this._paintPanel();     // keep an open panel live
     const sig = Object.values(ROOM_LIGHTS).flat()
       .map(e => e + ":" + (hass.states[e] ? hass.states[e].state : "x")).join("|")
       + "|" + (hass.states[THERMO.entity] ? JSON.stringify(hass.states[THERMO.entity].attributes.current_temperature) + (hass.states[THERMO.entity].attributes.hvac_action || "") : "")
@@ -137,7 +138,7 @@ class NeonFloorplanCard extends HTMLElement {
     for (const r of rooms) {
       const ents = this._roomLights(r.name);
       const on = (lit[r.name] || []).length;
-      const lp = iso(r.x + r.w / 2, r.y + r.d / 2, 4);
+      const lp = iso(r.x + r.w / 2, r.y + r.d * 0.17, 6);   // back edge, clear of the bulbs
       const col = on ? "#fde68a" : "rgba(126,231,247,0.5)";
       const glow = on ? "filter:drop-shadow(0 0 6px rgba(251,191,36,0.8));" : "";
       r.name.split(" & ").forEach((line, i) => {
@@ -146,16 +147,36 @@ class NeonFloorplanCard extends HTMLElement {
           + 'fill="' + col + '" style="text-transform:uppercase;' + glow + 'pointer-events:none;" '
           + 'font-family="Segoe UI, Roboto, sans-serif">' + line + "</text>";
       });
-      if (ents.length) {
-        const total = ents.length;
-        const y0 = lp[1] + (r.name.split(" & ").length) * 11 + 2;
-        for (let i = 0; i < total; i++) {
-          const isOn = i < on;
-          body += '<circle cx="' + (lp[0] - (total - 1) * 4 + i * 8).toFixed(1) + '" cy="' + y0.toFixed(1)
-            + '" r="2.4" fill="' + (isOn ? "#fbbf24" : "#334361") + '" '
-            + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>';
-        }
-      }
+      // one hanging bulb per light, standing in the room and tappable on its own
+      ents.forEach((e, i) => {
+        const s = this._hass.states[e];
+        const isOn = s.state === "on";
+        const dead = s.state === "unavailable" || s.state === "unknown";
+        const u = r.x + (r.w * (i + 1)) / (ents.length + 1);
+        const v = r.y + r.d * 0.72;
+        const foot = iso(u, v, 0);
+        const b = iso(u, v, 26);
+        const short = (s.attributes.friendly_name || e.split(".")[1].replace(/_/g, " "))
+          .replace(new RegExp(r.name, "i"), "").replace(/lights?/i, "").trim() || "light";
+        body += '<g class="nfbulb" data-e="' + e + '" style="cursor:pointer;">'
+          + '<line x1="' + fmt(foot).replace(",", '" y1="') + '" x2="' + fmt(b).replace(",", '" y2="')
+          + '" stroke="' + (isOn ? "rgba(251,191,36,0.35)" : "rgba(96,165,250,0.18)")
+          + '" stroke-width="0.8" pointer-events="none"/>'
+          + (isOn ? '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
+                    + '" r="15" fill="url(#nfpool)" pointer-events="none"/>' : "")
+          + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="6.2" fill="'
+          + (dead ? "#1e2740" : isOn ? "#fcd34d" : "#243049") + '" stroke="'
+          + (dead ? "rgba(148,163,184,0.35)" : isOn ? "rgba(253,230,138,0.95)" : "rgba(126,231,247,0.5)")
+          + '" stroke-width="1.1" ' + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>'
+          + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
+          + '" r="16" fill="transparent"/>'
+          + '<text x="' + b[0].toFixed(1) + '" y="' + (b[1] + 15).toFixed(1) + '" font-size="6.6" '
+          + 'font-weight="800" text-anchor="middle" fill="'
+          + (isOn ? "#fde68a" : "rgba(126,231,247,0.55)") + '" pointer-events="none" '
+          + 'font-family="Segoe UI, Roboto, sans-serif" style="text-transform:uppercase;">'
+          + short.slice(0, 12) + "</text>"
+          + "</g>";
+      });
     }
 
     // thermostat chip
@@ -197,13 +218,154 @@ class NeonFloorplanCard extends HTMLElement {
 
     this.querySelectorAll(".nftab").forEach(b =>
       b.addEventListener("pointerup", () => { this._floor = b.dataset.floor; this._lastSig = ""; this._render(); }));
+    this.querySelectorAll(".nfbulb").forEach(g =>
+      g.addEventListener("pointerup", ev => {
+        ev.stopPropagation();                    // this bulb, not the whole room
+        this._hass.callService("homeassistant", "toggle", { entity_id: g.dataset.e });
+      }));
     this.querySelectorAll(".nfroom").forEach(g =>
       g.addEventListener("pointerup", () => {
         const ents = this._roomLights(g.dataset.room);
-        if (ents.length) this._hass.callService("homeassistant", "toggle", { entity_id: ents });
+        if (ents.length) this._openPanel(g.dataset.room);
       }));
   }
+
+  /* ---------------------------------------------------------- light panel
+   * Tapping a room used to flip every light in it at once. The panel keeps
+   * that as one button and puts each light on its own row underneath, with a
+   * brightness slider for the bulbs that have one. */
+  _openPanel(room) {
+    this._closePanel();
+    this._panelRoom = room;
+    const back = document.createElement("div");
+    back.className = "nfpanel-back";
+    back.innerHTML =
+      '<style>' + NeonFloorplanCard.PANEL_CSS + '</style>' +
+      '<div class="nfpanel">' +
+        '<div class="nfphead"><span class="nfptitle"></span>' +
+          '<button class="nfpx" title="Close">&times;</button></div>' +
+        '<div class="nfpall">' +
+          '<button class="nfpbtn on" data-all="on">All on</button>' +
+          '<button class="nfpbtn" data-all="off">All off</button>' +
+        '</div>' +
+        '<div class="nfprows"></div>' +
+      '</div>';
+    back.addEventListener("pointerup", e => { if (e.target === back) this._closePanel(); });
+    back.querySelector(".nfpx").addEventListener("pointerup", () => this._closePanel());
+    back.querySelectorAll("[data-all]").forEach(b =>
+      b.addEventListener("pointerup", () => {
+        const ents = this._roomLights(this._panelRoom);
+        this._hass.callService("homeassistant",
+          b.dataset.all === "on" ? "turn_on" : "turn_off", { entity_id: ents });
+      }));
+    document.body.appendChild(back);
+    this._panel = back;
+    this._esc = e => { if (e.key === "Escape") this._closePanel(); };
+    window.addEventListener("keydown", this._esc);
+    this._paintPanel();
+  }
+
+  _closePanel() {
+    window.removeEventListener("keydown", this._esc);
+    if (this._panel) this._panel.remove();
+    this._panel = null;
+    this._panelRoom = null;
+  }
+
+  _paintPanel() {
+    if (!this._panel || !this._hass) return;
+    const room = this._panelRoom;
+    const ents = this._roomLights(room);
+    const on = ents.filter(e => this._hass.states[e].state === "on").length;
+    this._panel.querySelector(".nfptitle").textContent =
+      room.toUpperCase() + " · " + (on ? on + " of " + ents.length + " on" : "all off");
+    const rows = this._panel.querySelector(".nfprows");
+    const html = ents.map(e => {
+      const s = this._hass.states[e];
+      const lit = s.state === "on";
+      const name = (s.attributes.friendly_name || e.split(".")[1].replace(/_/g, " "))
+        .replace(new RegExp("^" + room + "\\s*", "i"), "");
+      const dim = e.startsWith("light.") && s.attributes.brightness != null;
+      const pct = dim ? Math.round(s.attributes.brightness / 2.55) : 0;
+      return '<div class="nfprow' + (lit ? " lit" : "") + '" data-e="' + e + '">' +
+        '<div class="nfptop">' +
+          '<span class="nfpdot"></span>' +
+          '<span class="nfpname">' + name + '</span>' +
+          '<button class="nfptog' + (lit ? " lit" : "") + '" data-t="' + e + '">' +
+            (lit ? "ON" : "OFF") + '</button>' +
+        '</div>' +
+        (dim ? '<div class="nfpdim"><input type="range" min="1" max="100" value="' + pct +
+               '" data-b="' + e + '"><span class="nfppct">' + pct + '%</span></div>' : "") +
+        '</div>';
+    }).join("");
+    // only rebuild when the shape changed, so a slider drag isn't yanked away
+    if (rows.dataset.sig !== html.replace(/value="\d+"/g, "")) {
+      rows.innerHTML = html;
+      rows.dataset.sig = html.replace(/value="\d+"/g, "");
+      rows.querySelectorAll("[data-t]").forEach(b =>
+        b.addEventListener("pointerup", ev => {
+          ev.stopPropagation();
+          this._hass.callService("homeassistant", "toggle", { entity_id: b.dataset.t });
+        }));
+      rows.querySelectorAll("[data-b]").forEach(sl => {
+        sl.addEventListener("input", () =>
+          sl.parentElement.querySelector(".nfppct").textContent = sl.value + "%");
+        sl.addEventListener("change", () =>
+          this._hass.callService("light", "turn_on",
+            { entity_id: sl.dataset.b, brightness_pct: Number(sl.value) }));
+      });
+    } else {
+      rows.querySelectorAll("[data-b]").forEach(sl => {
+        if (document.activeElement !== sl) {
+          const s = this._hass.states[sl.dataset.b];
+          const pct = s.attributes.brightness != null ? Math.round(s.attributes.brightness / 2.55) : 0;
+          sl.value = pct;
+          sl.parentElement.querySelector(".nfppct").textContent = pct + "%";
+        }
+      });
+      rows.querySelectorAll(".nfprow").forEach(r => {
+        const lit = this._hass.states[r.dataset.e].state === "on";
+        r.classList.toggle("lit", lit);
+        const b = r.querySelector(".nfptog");
+        b.classList.toggle("lit", lit);
+        b.textContent = lit ? "ON" : "OFF";
+      });
+    }
+  }
 }
+
+NeonFloorplanCard.PANEL_CSS = [
+  ".nfpanel-back{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;",
+  "justify-content:center;background:rgba(4,7,18,.78);backdrop-filter:blur(6px);",
+  "-webkit-backdrop-filter:blur(6px);font-family:'Segoe UI',Roboto,sans-serif;}",
+  ".nfpanel{width:min(94vw,430px);max-height:86vh;overflow-y:auto;padding:18px 18px 16px;",
+  "border-radius:22px;background:rgba(10,16,38,.97);border:1px solid rgba(251,191,36,.45);",
+  "box-shadow:0 0 40px rgba(251,191,36,.18),0 18px 50px rgba(0,0,0,.7);color:#eaf0fa;}",
+  ".nfphead{display:flex;align-items:center;gap:10px;margin-bottom:12px;}",
+  ".nfptitle{flex:1;font-size:14px;font-weight:900;letter-spacing:1px;color:#fde68a;",
+  "text-shadow:0 0 10px rgba(251,191,36,.5);}",
+  ".nfpx{background:none;border:none;color:#8195b5;font-size:26px;line-height:1;cursor:pointer;}",
+  ".nfpall{display:flex;gap:9px;margin-bottom:12px;}",
+  ".nfpbtn{flex:1;padding:10px 0;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;",
+  "background:rgba(13,20,44,.9);border:1px solid rgba(34,211,238,.45);color:#7ee7f7;font-family:inherit;}",
+  ".nfpbtn.on{border-color:rgba(251,191,36,.6);color:#fde68a;}",
+  ".nfprow{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:rgba(13,20,44,.8);",
+  "border:1px solid rgba(96,165,250,.16);}",
+  ".nfprow.lit{border-color:rgba(251,191,36,.5);box-shadow:0 0 14px rgba(251,191,36,.16);}",
+  ".nfptop{display:flex;align-items:center;gap:10px;}",
+  ".nfpdot{width:10px;height:10px;border-radius:50%;background:#334155;flex:none;}",
+  ".nfprow.lit .nfpdot{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.9);}",
+  ".nfpname{flex:1;font-size:15px;font-weight:700;text-transform:capitalize;",
+  "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
+  ".nfptog{width:64px;padding:7px 0;border-radius:20px;font-size:12px;font-weight:900;",
+  "cursor:pointer;background:rgba(2,6,23,.8);border:1px solid rgba(148,163,184,.4);",
+  "color:#94a3b8;font-family:inherit;flex:none;}",
+  ".nfptog.lit{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.75);color:#fde68a;",
+  "box-shadow:0 0 12px rgba(251,191,36,.3);}",
+  ".nfpdim{display:flex;align-items:center;gap:10px;margin:9px 2px 1px;}",
+  ".nfpdim input{flex:1;accent-color:#fbbf24;height:22px;}",
+  ".nfppct{width:42px;text-align:right;font-size:12px;font-weight:800;color:#fde68a;}",
+].join("");
 
 /* furniture dimensions — mirror of the editor's catalog */
 NeonFloorplanCard.TYPES = {

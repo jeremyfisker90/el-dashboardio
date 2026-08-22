@@ -1,0 +1,25 @@
+language: "en"
+# Assist grammar for the Cozi voice intents. Both intents hand the whole
+# sentence to the add-on's /voice/intent, which owns the real parsing — these
+# patterns only have to be loose enough to catch the way people actually talk.
+intents:
+  CoziAddToList:
+    data:
+      - sentences:
+          - "add {item} to (the|my|our) {listname} list"
+          - "add {item} to (the|my|our) {listname}"
+          - "put {item} on (the|my|our) {listname} list"
+          - "put {item} on (the|my|our) {listname}"
+  CoziAddAppointment:
+    data:
+      - sentences:
+          - "(create|add|make|schedule|book) (a|an) (appointment|event|calendar event) {details}"
+          - "(create|add|make|schedule|book) (a|an) (appointment|event) in cozi {details}"
+          - "(put|add) {details} on the (cozi|family) calendar"
+lists:
+  item:
+    wildcard: true
+  listname:
+    wildcard: true
+  details:
+    wildcard: true
