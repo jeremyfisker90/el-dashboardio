@@ -1,0 +1,6 @@
+keys/
+*.log
+neon_store.json
+cfg.json
+new_store.json
+layout_patch.json

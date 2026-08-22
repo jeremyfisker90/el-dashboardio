@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chores &amp; Points</title>
+<style>
+  body { font-family:'Segoe UI',Roboto,sans-serif; margin:0; color:#eaf0fa;
+         background:#070b1c;
+         background-image:radial-gradient(900px 500px at 20% -10%, rgba(34,211,238,.14), transparent 60%),
+                          radial-gradient(800px 600px at 110% 20%, rgba(167,139,250,.13), transparent 60%),
+                          radial-gradient(900px 500px at 60% 110%, rgba(251,146,60,.09), transparent 60%);
+         background-attachment:fixed; }
+  .hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid rgba(34,211,238,.22); flex-wrap:wrap; }
+  .hdr .title { font-size:20px; font-weight:800; flex:1; letter-spacing:.4px; text-shadow:0 0 12px rgba(34,211,238,.55); }
+  .btn { border:none; border-radius:10px; padding:9px 14px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn.ghost { background:rgba(255,255,255,.05); color:#9fb2d0; border:1px solid rgba(148,163,184,.30); }
+  .btn.blue { background:rgba(34,211,238,.16); color:#7ee7f7; border:1px solid rgba(34,211,238,.6);
+              box-shadow:0 0 12px rgba(34,211,238,.25); }
+  .kids { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:14px 16px; }
+  .kid { border-radius:16px; padding:14px 16px; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+  .kid.ian  { background:linear-gradient(135deg,rgba(45,212,191,.20),rgba(45,212,191,.06)); border:1px solid rgba(45,212,191,.55); box-shadow:0 0 16px rgba(45,212,191,.22), 0 4px 16px rgba(0,0,0,.5); }
+  .kid.evan { background:linear-gradient(135deg,rgba(251,191,36,.20),rgba(251,191,36,.06)); border:1px solid rgba(251,191,36,.55); box-shadow:0 0 16px rgba(251,191,36,.22), 0 4px 16px rgba(0,0,0,.5); }
+  .kid .name { font-size:18px; font-weight:800; }
+  .kid .pts  { font-size:40px; font-weight:800; line-height:1.1; }
+  .kid .pts small { font-size:17px; font-weight:600; color:#9fb2d0; }
+  .kid.ian .pts { color:#5eead4; text-shadow:0 0 14px rgba(45,212,191,.6); }
+  .kid.evan .pts { color:#fcd34d; text-shadow:0 0 14px rgba(251,191,36,.6); }
+  .bar { height:9px; background:rgba(255,255,255,.09); border-radius:6px; margin-top:8px; overflow:hidden; }
+  .bar > div { height:100%; border-radius:6px; }
+  .kid.ian .bar > div { background:#2dd4bf; box-shadow:0 0 8px #2dd4bf; }
+  .kid.evan .bar > div { background:#fbbf24; box-shadow:0 0 8px #fbbf24; }
+  .kid .goal { font-size:12px; color:#9fb2d0; margin-top:5px; }
+  .kid .win { color:#7fe6c0; font-weight:700; }
+
+  .sec { padding:12px 16px 2px; font-size:13px; letter-spacing:.5px; font-weight:800;
+         display:flex; align-items:center; gap:10px; }
+  .sec .pill { font-size:11px; font-weight:800; border-radius:20px; padding:3px 10px; letter-spacing:.4px; }
+  .pill.must { background:rgba(255,140,90,.18); color:#ff9a6b; border:1px solid rgba(255,140,90,.45); }
+  .pill.open { background:rgba(63,201,176,.18); color:#5fe0c6; border:1px solid rgba(63,201,176,.45); }
+  .pill.lock { background:rgba(143,176,232,.14); color:#9fb2d0; border:1px solid rgba(143,176,232,.32); }
+
+  .chore { background:rgba(13,20,44,.72); border:1px solid rgba(96,165,250,.18); border-radius:14px; margin:8px 16px; padding:12px 14px;
+           box-shadow:0 4px 14px rgba(0,0,0,.45), inset 0 0 18px rgba(255,255,255,.02); }
+  .chore.req { border-left:4px solid #ff8c5a; }
+  /* assignment colour wins over the required/optional stripe */
+  .chore.who-ian  { border-left:6px solid #2dd4bf; }
+  .chore.who-evan { border-left:6px solid #fbbf24; }
+  .chore.who-dad  { border-left:6px solid #a855f7; }
+  .chore.who-mom  { border-left:6px solid #f472b6; }
+  .chore.who-na   { border-left:6px solid #64748b; }
+  .who { display:inline-block; font-size:11px; font-weight:900; letter-spacing:.6px;
+         border-radius:20px; padding:2px 10px; margin-left:8px; vertical-align:middle; }
+  .who.ian  { background:rgba(45,212,191,.18);  color:#5eead4; border:1px solid rgba(45,212,191,.55); }
+  .who.evan { background:rgba(251,191,36,.18);  color:#fcd34d; border:1px solid rgba(251,191,36,.55); }
+  .who.dad  { background:rgba(168,85,247,.18);  color:#d8b4fe; border:1px solid rgba(168,85,247,.55); }
+  .who.mom  { background:rgba(244,114,182,.18); color:#f9a8d4; border:1px solid rgba(244,114,182,.55); }
+  .who.na   { background:rgba(143,176,232,.12); color:#9fb2d0; border:1px solid rgba(143,176,232,.30); }
+  .keyrow { display:flex; flex-wrap:wrap; gap:8px; padding:4px 16px 10px; }
+  .keyrow .k { display:inline-flex; align-items:center; gap:6px; font-size:12px;
+               font-weight:700; color:#aebdd6; background:rgba(255,255,255,.05); border-radius:20px;
+               padding:5px 12px; border:1px solid rgba(148,163,184,.22); }
+  .keyrow .sw { width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .chore.opt { border-left:4px solid #5fe0c6; }
+  .chore.done { opacity:.55; }
+  .chore.locked { opacity:.5; }
+  .chore .top { display:flex; align-items:flex-start; gap:10px; }
+  .chore .cn { font-size:17px; font-weight:700; flex:1; }
+  .badge { background:rgba(34,211,238,.14); color:#7ee7f7; border:1px solid rgba(34,211,238,.45);
+           font-weight:800; font-size:14px; border-radius:20px; padding:3px 12px; white-space:nowrap;
+           box-shadow:0 0 8px rgba(34,211,238,.20); }
+  .freq { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.5px; border-radius:20px;
+          padding:2px 8px; margin-left:8px; vertical-align:middle;
+          background:rgba(143,176,232,.14); color:#9fb2d0; border:1px solid rgba(143,176,232,.3); }
+  .freq.daily    { background:rgba(74,222,128,.16); color:#86efac; border-color:rgba(74,222,128,.38); }
+  .freq.biweekly { background:rgba(240,169,74,.16); color:#f0a94a; border-color:rgba(240,169,74,.38); }
+  .freq.monthly  { background:rgba(191,131,255,.16); color:#c39bff; border-color:rgba(191,131,255,.38); }
+  .chore.later { opacity:.45; }
+  .later .when { margin-top:8px; font-size:13px; color:#8fb0e8; font-style:italic; }
+  .desc { font-size:14px; color:#aebdd6; margin-top:6px; line-height:1.35; white-space:pre-wrap; }
+  .src { font-size:10px; color:#7d8ca8; margin-top:6px; letter-spacing:.4px; }
+  .claim { display:flex; gap:10px; margin-top:11px; }
+  .claim button { flex:1; border:none; border-radius:10px; padding:11px; font-size:16px; font-weight:800; cursor:pointer; color:#06121c; }
+  .claim .ian  { background:#2dd4bf; box-shadow:0 0 12px rgba(45,212,191,.45); }
+  .claim .evan { background:#fbbf24; box-shadow:0 0 12px rgba(251,191,36,.45); }
+  .claim .approve { background:#22c55e; box-shadow:0 0 12px rgba(34,197,94,.45); }
+  .chore.pending { border:1px solid rgba(244,63,94,.5); border-left:6px solid #f43f5e;
+                   box-shadow:0 0 14px rgba(244,63,94,.18), 0 4px 14px rgba(0,0,0,.45); }
+  .pill.fix { background:rgba(244,63,94,.16); color:#ffb4c2; border:1px solid rgba(244,63,94,.5); }
+  .claim button:disabled { background:#39445c; color:#7d8ca8; cursor:not-allowed; box-shadow:none; }
+  .lockmsg { margin-top:10px; font-size:13px; color:#9fb2d0; font-style:italic; }
+  .doneby { margin-top:9px; font-size:14px; font-weight:700; }
+  .rejbtn { background:#7a2130; color:#ffd9df; border:1px solid rgba(255,120,140,.45);
+            border-radius:9px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer; }
+  .rejbtn:active { background:#5e1926; }
+  .rejnote { margin-top:10px; background:rgba(255,90,110,.13); border:1px solid rgba(255,120,140,.42);
+             border-left:4px solid #ff5a6e; border-radius:10px; padding:9px 12px; }
+  .rejnote .t { font-size:12px; font-weight:800; color:#ff8fa0; letter-spacing:.4px; }
+  .rejnote .c { font-size:14px; color:#ffd9df; margin-top:4px; line-height:1.35; white-space:pre-wrap; }
+  .chore.sentback { border-left:4px solid #ff5a6e; }
+  .doneby .undo { float:right; background:none; border:none; color:#8195b5; font-size:13px; cursor:pointer; text-decoration:underline; }
+
+  #form { margin:10px 16px 16px; background:rgba(13,20,44,.85); border:1px solid rgba(34,211,238,.30); border-radius:14px; padding:14px; display:none;
+          box-shadow:0 0 18px rgba(34,211,238,.14); }
+  #form.open { display:block; }
+  #form label { display:block; font-size:12px; color:#8fb0e8; font-weight:700; margin:8px 0 4px; }
+  #form input, #form textarea { width:100%; box-sizing:border-box; background:#0a1226; border:2px solid rgba(96,165,250,.35);
+      color:#eaf0fa; border-radius:10px; padding:10px 12px; font-size:16px; font-family:inherit; outline:none; }
+  #form textarea { min-height:64px; resize:vertical; }
+  #form .row { display:flex; gap:12px; } #form .row > div { flex:1; }
+  #form .actions { display:flex; gap:10px; margin-top:14px; }
+  #form .actions .btn { flex:1; padding:12px; font-size:16px; }
+  .kindsel { display:flex; gap:10px; }
+  .kindsel button { flex:1; border-radius:10px; padding:11px; font-size:15px; font-weight:800; cursor:pointer;
+      background:#0a1226; color:#9fb2d0; border:2px solid rgba(96,165,250,.35); }
+  .kindsel button.on { background:rgba(34,211,238,.18); color:#7ee7f7; border-color:rgba(34,211,238,.7);
+      box-shadow:0 0 10px rgba(34,211,238,.30); }
+
+  .foot { margin:18px 16px 26px; padding-top:12px; border-top:1px solid rgba(143,176,232,.14);
+          font-size:12px; color:#7d8ca8; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .foot .btn { padding:7px 12px; font-size:12px; }
+  .foot .err { color:#ff9a8a; }
+  .empty { padding:16px; color:#8195b5; text-align:center; font-size:14px; }
+  #msg { padding:26px; text-align:center; color:#9fb2d0; }
+
+  /* ===== full-frame 2-column layout: board+done left, kid queues right ===== */
+  .cols { display:grid; grid-template-columns: 1.15fr 1fr; gap:16px;
+          padding:4px 16px 20px; align-items:start; }
+  /* keep two columns on the portrait tablet (~710 CSS px); stack only on phones */
+  @media (max-width: 560px){ .cols { grid-template-columns: 1fr; } }
+  .colL .sec, .colR .sec { padding-left:2px; padding-right:2px; }
+
+  /* board card grid inside the left column */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+          gap:10px; }
+  .grid .chore { margin:0; }
+
+  /* contained section panels with header bands */
+  .panel { border-radius:18px; margin-bottom:16px; overflow:hidden;
+           background:rgba(10,16,36,.55); border:1px solid rgba(34,211,238,.35);
+           box-shadow:0 0 16px rgba(34,211,238,.10), 0 6px 18px rgba(0,0,0,.45); }
+  .panel.donep { border-color:rgba(143,176,232,.28); box-shadow:0 6px 18px rgba(0,0,0,.45); }
+  .phead { display:flex; align-items:center; gap:10px; padding:9px 14px;
+           font-size:13.5px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
+           background:linear-gradient(180deg, rgba(34,211,238,.30), rgba(34,211,238,.08));
+           border-bottom:2px solid #22d3ee; color:#eafcff;
+           text-shadow:0 0 10px rgba(34,211,238,.7); }
+  .panel.donep .phead { background:linear-gradient(180deg, rgba(143,176,232,.22), rgba(143,176,232,.05));
+                        border-bottom-color:#8fb0e8; color:#dbe7ff;
+                        text-shadow:0 0 8px rgba(143,176,232,.6); }
+  .phead .note { margin-left:auto; font-size:10.5px; font-weight:700; letter-spacing:.5px;
+                 opacity:.75; text-transform:none; }
+  .pbody { padding:12px; }
+  .sub { font-size:11.5px; font-weight:900; letter-spacing:.8px; margin:14px 2px 8px;
+         display:flex; gap:8px; align-items:center; }
+  .pbody .sub:first-child { margin-top:0; }
+
+  /* kid queue panels (right column) */
+  .kpanel { border-radius:18px; padding:0; margin-bottom:16px; overflow:hidden; }
+  .kpanel.ian  { background:linear-gradient(135deg,rgba(45,212,191,.12),rgba(45,212,191,.03));
+                 border:1px solid rgba(45,212,191,.45); box-shadow:0 0 16px rgba(45,212,191,.14), 0 4px 16px rgba(0,0,0,.45); }
+  .kpanel.evan { background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(251,191,36,.03));
+                 border:1px solid rgba(251,191,36,.45); box-shadow:0 0 16px rgba(251,191,36,.14), 0 4px 16px rgba(0,0,0,.45); }
+  .kpanel .khead { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+                   padding:10px 14px; }
+  .kpanel.ian .khead  { background:linear-gradient(180deg, rgba(45,212,191,.30), rgba(45,212,191,.08));
+                        border-bottom:2px solid #2dd4bf; }
+  .kpanel.evan .khead { background:linear-gradient(180deg, rgba(251,191,36,.30), rgba(251,191,36,.08));
+                        border-bottom:2px solid #fbbf24; }
+  .kpanel .kbody { padding:10px 12px 12px; }
+  .kpanel .kname { font-size:17px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; }
+  .kpanel.ian .kname  { color:#5eead4; text-shadow:0 0 12px rgba(45,212,191,.6); }
+  .kpanel.evan .kname { color:#fcd34d; text-shadow:0 0 12px rgba(251,191,36,.6); }
+  .kpanel .kpts { font-size:34px; font-weight:800; line-height:1; }
+  .kpanel .kpts small { font-size:15px; font-weight:600; color:#9fb2d0; }
+  .kpanel.ian .kpts  { color:#5eead4; text-shadow:0 0 14px rgba(45,212,191,.55); }
+  .kpanel.evan .kpts { color:#fcd34d; text-shadow:0 0 14px rgba(251,191,36,.55); }
+  .kpanel .qcount { margin-left:auto; font-size:12px; font-weight:900; letter-spacing:.5px;
+                    border-radius:20px; padding:4px 12px; }
+  .kpanel.ian .qcount  { background:rgba(45,212,191,.16); color:#5eead4; border:1px solid rgba(45,212,191,.5); }
+  .kpanel.evan .qcount { background:rgba(251,191,36,.16); color:#fcd34d; border:1px solid rgba(251,191,36,.5); }
+  .kpanel .bar { margin:10px 0 4px; }
+  .kpanel.ian .bar > div  { background:#2dd4bf; box-shadow:0 0 8px #2dd4bf; }
+  .kpanel.evan .bar > div { background:#fbbf24; box-shadow:0 0 8px #fbbf24; }
+  .kpanel .goal { font-size:12px; color:#9fb2d0; margin-bottom:10px; }
+  .kpanel .win { color:#7fe6c0; font-weight:700; }
+  .kpanel .chore { margin:10px 0 0; }
+  .kpanel .empty { padding:12px 4px 2px; text-align:left; }
+
+  /* compact queue cards: name + points, tap to open the rest */
+  .qmini { cursor:pointer; padding:10px 12px; }
+  .qmini .qrow { display:flex; align-items:center; gap:8px; }
+  .qmini .qname { flex:1; min-width:0; font-size:15px; font-weight:700;
+                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qmini .qcaret { color:#8195b5; font-size:12px; transition:transform .15s; flex:none; }
+  .qmini.open .qcaret { transform:rotate(180deg); }
+  .qmini .qdetail { display:none; margin-top:9px; padding-top:9px; cursor:default;
+                    border-top:1px solid rgba(148,163,184,.18); }
+  .qmini.open .qdetail { display:block; }
+  .claim .toian  { background:rgba(45,212,191,.16); color:#5eead4; border:1px solid rgba(45,212,191,.6);
+                   box-shadow:0 0 10px rgba(45,212,191,.22); }
+  .claim .toevan { background:rgba(251,191,36,.16); color:#fcd34d; border:1px solid rgba(251,191,36,.6);
+                   box-shadow:0 0 10px rgba(251,191,36,.22); }
+  .claim .release { flex:0 0 auto; background:rgba(255,255,255,.05); color:#9fb2d0;
+                    border:1px solid rgba(148,163,184,.30); padding:11px 14px; }
+</style>
+</head>
+<body>
+<div id="app"><div id="msg">Loading chores…</div></div>
+<script>
+let API = 'http://' + location.hostname + ':5000';
+const API_FALLBACK = 'http://192.168.1.226:5000';   // LAN address, for PCs browsing HA by another name
+let D = null, editingId = null, formKind = 'required', formFreq = 'weekly', formWho = 'na';
+
+async function api(path, body){
+  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  let r;
+  try { r = await fetch(API + path, opt); }
+  catch(e){
+    if (API === API_FALLBACK) throw e;
+    API = API_FALLBACK;                              // hostname:5000 unreachable -> try the LAN IP
+    r = await fetch(API + path, opt);
+  }
+  if (!r.ok) {
+    let detail = '';
+    try { detail = (await r.json()).detail || ''; } catch(e){}
+    throw {status: r.status, detail};
+  }
+  return r.json().catch(()=>({}));
+}
+async function load(){
+  try { D = await api('/chores'); } catch(e){
+    document.getElementById('app').innerHTML='<div id="msg">Chores service unavailable.</div>'; return; }
+  render();
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+const WHO_LABEL = {ian:'IAN', evan:'EVAN', dad:'DAD', mom:'MOM ❤️', na:'ANYONE'};
+const WHO_COLOR = {ian:'#2dd4bf', evan:'#fbbf24', dad:'#a855f7', mom:'#f472b6', na:'#64748b'};
+function whoLabel(p){ return WHO_LABEL[p] || 'ANYONE'; }
+function whoColor(p){ return WHO_COLOR[p] || '#6b7a95'; }
+
+function choreHtml(c, locked, pending){
+  const w = c.assigned_to || 'na';
+  const cls = 'chore ' + (c.kind === 'optional' ? 'opt' : 'req') + ' who-' + w
+            + (locked ? ' locked' : '') + (c.rejected ? ' sentback' : '')
+            + (pending ? ' pending' : '');
+  const srcLabel = c.source === 'cozi' ? 'from Cozi' : c.source === 'sheet' ? 'from spreadsheet' : 'added here';
+  const fcls = (c.frequency||'weekly').replace('-','');
+  let h = '<div class="' + cls + '"><div class="top"><div class="cn">' + esc(c.name)
+    + '<span class="who ' + w + '">' + whoLabel(w) + '</span>'
+    + '<span class="freq ' + fcls + '">' + esc(c.frequency||'weekly').toUpperCase() + '</span></div>'
+    + '<div class="badge">' + c.points + ' pts</div></div>'
+    + (c.description ? '<div class="desc">' + esc(c.description) + '</div>' : '');
+  if (c.rejected){
+    h += '<div class="rejnote"><div class="t">↩ SENT BACK BY A PARENT — '
+       + (c.rejected.kid === 'ian' ? 'IAN' : 'EVAN') + ' LOST ' + c.points + ' PTS</div>'
+       + (c.rejected.comment ? '<div class="c">"' + esc(c.rejected.comment) + '"</div>' : '')
+       + '</div>';
+  }
+  const q = c.queued_for || 'na';
+  if (pending){
+    h += '<div class="claim">'
+      + '<button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>';
+  } else if (locked){
+    h += '<div class="lockmsg">🔒 Locked until all required chores are done ('
+       + D.required_left + ' left)</div>';
+  } else if (q === 'ian' || q === 'evan'){
+    // card lives in a kid's queue: finish it (code) or put it back on the board
+    h += '<div class="claim">'
+      + '<button class="' + q + '" onclick="claim(' + c.id + ',\'' + q + '\')">'
+      + (q === 'ian' ? 'Ian' : 'Evan') + ': Done ✓</button>'
+      + '<button class="release" onclick="queueChore(' + c.id + ',\'na\')">↩ Board</button></div>';
+  } else {
+    // open job: grab it into your queue (no code needed to queue)
+    h += '<div class="claim">'
+      + '<button class="toian" onclick="queueChore(' + c.id + ',\'ian\')">→ Ian\'s queue</button>'
+      + '<button class="toevan" onclick="queueChore(' + c.id + ',\'evan\')">→ Evan\'s queue</button></div>';
+  }
+  h += '<div style="margin-top:8px;text-align:right"><span class="src">' + srcLabel + '</span> &nbsp; '
+    + (pending ? '' : '<button class="btn ghost" style="padding:5px 10px;font-size:12px;color:#fbbf24;border-color:rgba(251,191,36,.5)" '
+        + 'onclick="assignNotify(' + c.id + ')">📣 Assign &amp; notify</button> ')
+    + '<button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="editChore(' + c.id + ')">Edit</button> '
+    + '<button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="delChore(' + c.id + ')">Delete</button></div>'
+    + '</div>';
+  return h;
+}
+
+function render(){
+  const t = D.target || 100, tot = D.totals || {ian:0,evan:0};
+  let html = '<div class="hdr"><div class="title">⭐ Chores &amp; Points</div>'
+    + '<button class="btn blue" onclick="openForm()">+ Add Chore</button>'
+    + '<button class="btn ghost" onclick="newWeek()">↻ New Week</button></div>'
+    + formHtml();
+
+  const all = D.chores || [];
+  const posted = all.filter(c=>c.posted !== false);
+  const later  = all.filter(c=>c.posted === false && !c.done_by);
+  const pend = posted.filter(c=>!c.done_by && c.rejected);
+  const open = posted.filter(c=>!c.done_by && !c.rejected);
+  const qFor = c => c.queued_for || 'na';
+  const qIan  = open.filter(c=>qFor(c)==='ian');
+  const qEvan = open.filter(c=>qFor(c)==='evan');
+  const board = open.filter(c=>qFor(c)!=='ian' && qFor(c)!=='evan');
+  const req  = board.filter(c=>c.kind !== 'optional');
+  const opt  = board.filter(c=>c.kind === 'optional');
+  const done = all.filter(c=>c.done_by);
+  const unlocked = !!D.optional_unlocked;
+  const grid = cards => '<div class="grid">' + cards.join('') + '</div>';
+
+  // compact queue card: just name + points until tapped open
+  const queueCard = (c, isFix) => {
+    const w = isFix ? (c.rejected && c.rejected.kid) || 'na' : (c.queued_for || 'na');
+    const fcls = (c.frequency || 'weekly').replace('-', '');
+    let detail = '<div class="qdetail">'
+      + (c.description ? '<div class="desc">' + esc(c.description) + '</div>' : '')
+      + '<div style="margin-top:6px"><span class="freq ' + fcls + '" style="margin-left:0">'
+      + esc(c.frequency || 'weekly').toUpperCase() + '</span>'
+      + '<span class="who ' + (c.assigned_to || 'na') + '">' + whoLabel(c.assigned_to || 'na') + '</span></div>';
+    if (isFix){
+      detail += '<div class="rejnote"><div class="t">↩ SENT BACK BY A PARENT — '
+        + (w === 'ian' ? 'IAN' : 'EVAN') + ' LOST ' + c.points + ' PTS</div>'
+        + (c.rejected && c.rejected.comment ? '<div class="c">"' + esc(c.rejected.comment) + '"</div>' : '')
+        + '</div>'
+        + '<div class="claim"><button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>';
+    } else {
+      detail += '<div class="claim">'
+        + '<button class="' + w + '" onclick="claim(' + c.id + ',\'' + w + '\')">'
+        + (w === 'ian' ? 'Ian' : 'Evan') + ': Done ✓</button>'
+        + '<button class="release" onclick="queueChore(' + c.id + ',\'na\')">↩ Board</button></div>';
+    }
+    detail += '<div style="margin-top:8px;text-align:right">'
+      + '<button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="editChore(' + c.id + ')">Edit</button> '
+      + '<button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="delChore(' + c.id + ')">Delete</button></div>'
+      + '</div>';
+    return '<div class="chore qmini who-' + w + (isFix ? ' sentback pending' : '') + '" onclick="toggleQ(event, this)">'
+      + '<div class="qrow"><span class="qname">' + esc(c.name) + '</span>'
+      + (isFix ? '<span class="pill fix">FIX</span>' : '')
+      + '<span class="badge">' + c.points + ' pts</span>'
+      + '<span class="qcaret">▾</span></div>'
+      + detail + '</div>';
+  };
+
+  const kidPanel = (k, label) => {
+    const val = tot[k] || 0;
+    const pct = Math.min(100, Math.round(val / t * 100));
+    const msg = val >= t ? '<span class="win">🎯 Target hit!</span>' : (t - val) + ' to go';
+    const rej = pend.filter(c => c.rejected && c.rejected.kid === k);   // fixes sit on top
+    const q = k === 'ian' ? qIan : qEvan;
+    return '<div class="kpanel ' + k + '">'
+      + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
+      + '<span class="kpts">' + val + ' <small>/ ' + t + '</small></span>'
+      + '<span class="qcount">' + (rej.length + q.length) + ' IN QUEUE'
+      + (rej.length ? ' · ' + rej.length + ' TO FIX' : '') + '</span></div>'
+      + '<div class="kbody">'
+      + '<div class="bar"><div style="width:' + pct + '%"></div></div>'
+      + '<div class="goal">' + msg + '</div>'
+      + rej.map(c => queueCard(c, true)).join('')
+      + q.map(c => queueCard(c, false)).join('')
+      + (!rej.length && !q.length
+          ? '<div class="empty">Queue is empty — grab a job from the board ⬅</div>' : '')
+      + '</div></div>';
+  };
+
+  // ===== two columns: board + done on the left, kid queues on the right =====
+  html += '<div class="cols"><div class="colL">';
+
+  // --- JOB BOARD panel: everything still up for grabs ---
+  html += '<div class="panel"><div class="phead">📋 Job Board'
+       + '<span class="note">' + board.length + ' open · tap a job to queue it</span></div>'
+       + '<div class="pbody">';
+  html += '<div class="sub" style="color:#ff9a6b">REQUIRED'
+       + '<span class="pill must">DO THESE FIRST</span></div>';
+  html += req.length ? grid(req.map(c => choreHtml(c, false)))
+                     : '<div class="empty">Every required chore is queued or done. 🎉</div>';
+  html += '<div class="sub" style="color:#5fe0c6">OPTIONAL — EXTRA POINTS'
+       + (unlocked ? '<span class="pill open">UNLOCKED</span>'
+                   : '<span class="pill lock">🔒 ' + D.required_left + ' REQUIRED LEFT</span>')
+       + '</div>';
+  html += opt.length ? grid(opt.map(c => choreHtml(c, !unlocked)))
+                     : '<div class="empty">No optional chores right now.</div>';
+  html += '</div></div>';
+
+  // --- DONE panel: this week's history + what's resting ---
+  if (done.length || later.length){
+    html += '<div class="panel donep"><div class="phead">✅ Done This Week'
+         + '<span class="note">resets Monday</span></div><div class="pbody">';
+    if (done.length){
+      html += grid(done.map(c => {
+        const col = c.done_by==='ian' ? '#2dd4bf' : '#fbbf24';
+        return '<div class="chore done"><div class="top"><div class="cn">'+esc(c.name)+'</div>'
+          + '<div class="badge">'+c.points+' pts</div></div>'
+          + '<div class="doneby" style="color:'+col+'">✓ '+(c.done_by==='ian'?'Ian':'Evan')
+          + '<button class="undo" onclick="unclaim('+c.id+')">undo</button></div>'
+          + '<div style="margin-top:10px;text-align:right">'
+          + '<button class="rejbtn" onclick="reject('+c.id+')">↩ Rejected by parent</button></div>'
+          + '</div>';
+      }));
+    } else {
+      html += '<div class="empty">Nothing finished yet this week.</div>';
+    }
+    if (later.length){
+      html += '<div class="sub" style="color:#8195b5">NOT DUE YET — ' + later.length + ' on the rotation</div>';
+      html += grid(later.map(c => {
+        const d = c.next_due ? new Date(c.next_due + 'T00:00:00') : null;
+        const when = d ? d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'}) : 'later';
+        const fcls = (c.frequency||'weekly').replace('-','');
+        return '<div class="chore later"><div class="top"><div class="cn">' + esc(c.name)
+          + '<span class="freq ' + fcls + '">' + esc(c.frequency||'weekly').toUpperCase() + '</span></div>'
+          + '<div class="badge">' + c.points + ' pts</div></div>'
+          + '<div class="when">🗓 Back on the board ' + when + '</div></div>';
+      }));
+    }
+    html += '</div></div>';
+  }
+
+  // close the left column, add the kid queue panels on the right (Ian on top)
+  html += '</div><div class="colR">'
+       + kidPanel('ian', 'Ian')
+       + kidPanel('evan', 'Evan')
+       + '</div></div>';
+
+  html += '<div class="foot">'
+    + '<span>' + (D.cozi_enabled === false
+        ? (D.sheet_url ? 'Synced with the spreadsheet' : 'Local board only')
+        : 'Synced with Cozi lists <b>Chores Required</b> / <b>Chores Optional</b>'
+          + (D.sheet_url ? ' + spreadsheet' : '')) + '</span>'
+    + '<button class="btn ghost" onclick="syncNow()">↻ Sync now</button>'
+    + '<span>' + (D.last_sync ? 'last sync ' + D.last_sync.replace('T',' ') : 'never synced')
+    + (D.sync_note ? ' (' + esc(D.sync_note) + ')' : '') + '</span>'
+    + (D.sync_error ? '<span class="err">⚠ ' + esc(D.sync_error) + '</span>' : '')
+    + '<button class="btn ghost" onclick="setSheet()">Spreadsheet link…</button>'
+    + '</div>';
+
+  document.getElementById('app').innerHTML = html;
+}
+
+function formHtml(){
+  const c = editingId ? (D.chores||[]).find(x=>x.id===editingId) : null;
+  const k = c ? (c.kind || 'required') : formKind;
+  const fq = c ? (c.frequency || 'weekly') : formFreq;
+  const wa = c ? (c.assigned_to || 'na') : formWho;
+  return '<div id="form" class="'+(editingId!==null?'open':'')+'">'
+    + '<div class="row"><div style="flex:2"><label>Chore name</label>'
+    + '<input id="f_name" placeholder="e.g. Unload dishwasher" value="'+esc(c?c.name:'')+'"></div>'
+    + '<div style="flex:1"><label>Points</label>'
+    + '<input id="f_pts" type="number" inputmode="numeric" placeholder="10" value="'+(c?c.points:'')+'"></div></div>'
+    + '<label>Type</label><div class="kindsel">'
+    + '<button id="k_req" class="'+(k!=='optional'?'on':'')+'" onclick="setKind(\'required\')">Required</button>'
+    + '<button id="k_opt" class="'+(k==='optional'?'on':'')+'" onclick="setKind(\'optional\')">Optional</button></div>'
+    + '<label>How often</label><div class="kindsel">'
+    + '<button id="q_daily" class="'+(fq==='daily'?'on':'')+'" onclick="setFreq(\'daily\')">Daily</button>'
+    + '<button id="q_weekly" class="'+(fq==='weekly'?'on':'')+'" onclick="setFreq(\'weekly\')">Weekly</button>'
+    + '<button id="q_biweekly" class="'+(fq==='bi-weekly'?'on':'')+'" onclick="setFreq(\'bi-weekly\')">Bi-weekly</button>'
+    + '<button id="q_monthly" class="'+(fq==='monthly'?'on':'')+'" onclick="setFreq(\'monthly\')">Monthly</button></div>'
+    + '<label>Assigned to</label><div class="kindsel">'
+    + ['ian','evan','dad','mom','na'].map(function(p){
+        return '<button id="w_'+p+'" class="'+(wa===p?'on':'')+'" onclick="setWho(\'' + p + '\')">'
+             + (p==='na'?'NA':whoLabel(p).charAt(0)+whoLabel(p).slice(1).toLowerCase()) + '</button>';
+      }).join('')
+    + '</div>'
+    + '<label>How to do it (details for the kids)</label>'
+    + '<textarea id="f_desc" placeholder="Put all dishes away and wipe down the counter">'+esc(c?c.description:'')+'</textarea>'
+    + '<div class="actions"><button class="btn blue" onclick="saveChore()">'+(c?'Save changes':'Add chore')+'</button>'
+    + '<button class="btn ghost" onclick="closeForm()">Cancel</button></div></div>';
+}
+function setKind(k){
+  formKind = k;
+  if (editingId) { const c=(D.chores||[]).find(x=>x.id===editingId); if(c) c.kind=k; }
+  document.getElementById('k_req').className = k!=='optional' ? 'on':'';
+  document.getElementById('k_opt').className = k==='optional' ? 'on':'';
+}
+function setFreq(f){
+  formFreq = f;
+  if (editingId) { const c=(D.chores||[]).find(x=>x.id===editingId); if(c) c.frequency=f; }
+  for (const [id,val] of [['q_daily','daily'],['q_weekly','weekly'],['q_biweekly','bi-weekly'],['q_monthly','monthly']]) {
+    const el=document.getElementById(id); if(el) el.className = (val===f?'on':'');
+  }
+}
+function setWho(p){
+  formWho = p;
+  if (editingId) { const c=(D.chores||[]).find(x=>x.id===editingId); if(c) c.assigned_to=p; }
+  ['ian','evan','dad','mom','na'].forEach(function(x){
+    const el=document.getElementById('w_'+x); if(el) el.className = (x===p?'on':'');
+  });
+}
+function currentWho(){
+  const hit = ['ian','evan','dad','mom','na'].find(function(x){
+    const el=document.getElementById('w_'+x); return el && el.className==='on';
+  });
+  return hit || 'na';
+}
+function currentFreq(){
+  for (const [id,val] of [['q_daily','daily'],['q_weekly','weekly'],['q_biweekly','bi-weekly'],['q_monthly','monthly']]) {
+    const el=document.getElementById(id); if(el && el.className==='on') return val;
+  }
+  return 'weekly';
+}
+function openForm(){ editingId = 0; formKind='required'; formFreq='weekly'; formWho='na'; render();
+  const f=document.getElementById('form'); if(f){f.classList.add('open'); document.getElementById('f_name').focus();} }
+function editChore(id){ editingId = id; render(); }
+function closeForm(){ editingId = null; render(); }
+
+async function saveChore(){
+  const name=(document.getElementById('f_name').value||'').trim();
+  const pts=parseInt(document.getElementById('f_pts').value||'0')||0;
+  const desc=(document.getElementById('f_desc').value||'').trim();
+  const kind=document.getElementById('k_opt').className==='on' ? 'optional' : 'required';
+  if(!name){ alert('Give the chore a name.'); return; }
+  try {
+    const frequency = currentFreq(), assigned_to = currentWho();
+    if(editingId) await api('/chores/edit', {id:editingId, name, points:pts, description:desc, kind, frequency, assigned_to});
+    else await api('/chores/add', {name, points:pts, description:desc, kind, frequency, assigned_to});
+  } catch(e){ alert('Could not save: ' + (e.detail||e.status||e)); }
+  editingId=null; await load();
+}
+async function delChore(id){ if(!confirm('Delete this chore?')) return;
+  try { await api('/chores/delete',{id}); } catch(e){}
+  await load(); }
+const CLAIM_CODES = {ian:'1111', evan:'2222'};  // change these!
+const PARENT_CODE = '0000';  // change this!
+async function claim(id, kid){
+  const code = prompt((kid==='ian'?'Ian':'Evan') + ' — enter your code:');
+  if (code === null) return;
+  if ((code||'').trim() !== CLAIM_CODES[kid]) { alert('nice try'); return; }
+  try { await api('/chores/claim',{id, kid}); }
+  catch(e){
+    if (e.status===423) alert(e.detail||'Required chores must be finished first.');
+    else if (e.status===425) alert(e.detail||'That one is not due yet.');
+    else alert('Could not claim: ' + (e.detail||e.status));
+  }
+  await load();
+}
+async function reject(id){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const who = c.done_by === 'ian' ? 'Ian' : 'Evan';
+  const comment = prompt('Send "' + (c.name||'this chore') + '" back to ' + who + '?\n\n'
+    + who + ' loses ' + (c.points||0) + ' points and it goes back on the board.\n\n'
+    + 'What needs fixing? (this shows on the chore)');
+  if (comment === null) return;
+  try { await api('/chores/reject', {id, comment}); }
+  catch(e){ alert('Could not reject: ' + (e.detail||e.status)); }
+  await load();
+}
+async function approveFix(id){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const kid = c.rejected && c.rejected.kid ? c.rejected.kid : null;
+  if (!kid){ alert('No record of who did this one — have the kid claim it again.'); return; }
+  const who = kid==='ian' ? 'Ian' : 'Evan';
+  const code = prompt('Approve the redo of "' + (c.name||'this chore') + '"?\n\n'
+    + who + ' gets the ' + (c.points||0) + ' points back.\n\nParent code:');
+  if (code === null) return;
+  if ((code||'').trim() !== PARENT_CODE){ alert('nice try'); return; }
+  try { await api('/chores/claim', {id, kid}); }
+  catch(e){ alert('Could not approve: ' + (e.detail||e.status)); }
+  await load();
+}
+function toggleQ(ev, el){
+  // taps on buttons/links inside the open detail shouldn't collapse the card
+  if (ev.target.closest('.qdetail')) return;
+  el.classList.toggle('open');
+}
+async function queueChore(id, kid){
+  try { await api('/chores/queue', {id, kid}); }
+  catch(e){ alert('Could not move that job: ' + (e.detail||e.status)); }
+  await load();
+}
+async function assignNotify(id){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const code = prompt('Assign "' + (c.name||'this chore') + '" and text the kid?\n\nParent code:');
+  if (code === null) return;
+  if ((code||'').trim() !== PARENT_CODE){ alert('nice try'); return; }
+  const pick = prompt('Assign to who?\n\n  1 = Ian\n  2 = Evan');
+  if (pick === null) return;
+  const kid = pick.trim() === '1' ? 'ian' : pick.trim() === '2' ? 'evan' : null;
+  if (!kid){ alert('Enter 1 or 2'); return; }
+  try {
+    const r = await api('/chores/assign', {id, kid});
+    const who = kid === 'ian' ? 'Ian' : 'Evan';
+    alert(r.sms ? '📣 Assigned — text sent to ' + who + '!'
+                : 'Assigned to ' + who + ' — texting is not configured yet.');
+  } catch(e){ alert('Could not assign: ' + (e.detail||e.status)); }
+  await load();
+}
+async function unclaim(id){ try { await api('/chores/unclaim',{id}); } catch(e){} await load(); }
+async function newWeek(){
+  if(!confirm('Start a NEW WEEK?\n\nResets Ian & Evan to 0 points and re-opens every chore.')) return;
+  try { await api('/chores/newweek'); } catch(e){}
+  await load();
+}
+async function syncNow(){
+  try { await api('/chores/sync', {}); } catch(e){}
+  await load();
+}
+async function setSheet(){
+  const cur = D.sheet_url || '';
+  const url = prompt('Paste the "Publish to web" CSV link for the chores spreadsheet.\n\n'
+    + 'In Google Sheets: File → Share → Publish to web → choose the sheet → '
+    + 'Comma-separated values (.csv) → Publish.\n\n'
+    + 'Columns are matched by keyword, so headers can be worded however you like:\n'
+    + '  name   → Chore Title / Task / Job / Name\n'
+    + '  points → Points / Pts / Value\n'
+    + '  steps  → Chore Steps/Details / Description / How to / Instructions\n'
+    + '  type   → Type (Required / Optional) / Kind / Category\n\n'
+    + 'Leave blank to turn the spreadsheet off.', cur);
+  if (url === null) return;
+  try { await api('/chores/sheeturl', {url: url.trim()}); } catch(e){ alert('Could not save: ' + (e.detail||e.status)); }
+  await load();
+}
+load();
+setInterval(()=>{ if(editingId===null) load(); }, 45000);
+</script>
+</body>
+</html>

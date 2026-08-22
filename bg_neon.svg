@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="base" cx="30%" cy="8%" r="130%">
+      <stop offset="0%" stop-color="#0d142e"/>
+      <stop offset="45%" stop-color="#060a18"/>
+      <stop offset="100%" stop-color="#030509"/>
+    </radialGradient>
+    <radialGradient id="cyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="purple" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orange" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="green" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="pink" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="800" fill="url(#base)"/>
+  <ellipse cx="150" cy="60" rx="520" ry="360" fill="url(#cyan)"/>
+  <ellipse cx="1180" cy="240" rx="560" ry="420" fill="url(#purple)"/>
+  <ellipse cx="480" cy="420" rx="700" ry="500" fill="url(#cyan)" opacity="0.3"/>
+  <!-- plexus web, lower third -->
+  <g stroke="#1e3a5f" stroke-width="1" opacity="0.30">
+    <path d="M40 780 L180 690 L340 760 L470 670 L620 750 L780 680 L930 758 L1080 675 L1240 745"/>
+    <path d="M120 800 L260 720 L420 790 L560 700 L720 780 L880 705 L1030 785 L1180 700"/>
+    <path d="M180 690 L260 720 M470 670 L560 700 M780 680 L880 705 M1080 675 L1180 700"/>
+  </g>
+  <g fill="#3b82f6" opacity="0.4">
+    <circle cx="180" cy="690" r="2"/><circle cx="470" cy="670" r="2"/>
+    <circle cx="780" cy="680" r="2"/><circle cx="1080" cy="675" r="2"/>
+    <circle cx="340" cy="760" r="1.6"/><circle cx="620" cy="750" r="1.6"/>
+    <circle cx="930" cy="758" r="1.6"/><circle cx="1240" cy="745" r="1.6"/>
+  </g>
+  <!-- color streaks along the bottom edge, echoing the menu row -->
+  <ellipse cx="160" cy="800" rx="240" ry="70" fill="url(#cyan)"/>
+  <ellipse cx="430" cy="805" rx="220" ry="60" fill="url(#purple)"/>
+  <ellipse cx="700" cy="800" rx="220" ry="60" fill="url(#pink)"/>
+  <ellipse cx="960" cy="805" rx="220" ry="60" fill="url(#orange)"/>
+  <ellipse cx="1200" cy="800" rx="220" ry="65" fill="url(#green)"/>
+</svg>

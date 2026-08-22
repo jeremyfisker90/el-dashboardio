@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schedule</title>
+<style>
+  :root { --accent:#fb4f14; --accent-soft:rgba(251,79,20,.20); }
+  html { background:#070b1c;
+         background-image:radial-gradient(900px 500px at 20% -10%, rgba(34,211,238,.12), transparent 60%),
+                          radial-gradient(800px 600px at 110% 30%, rgba(167,139,250,.11), transparent 60%);
+         background-attachment:fixed; }
+  /* the dashboard panel can be 2000px+ wide; keep the list readable and centred */
+  body { font-family:'Segoe UI',Roboto,sans-serif; margin:0 auto; max-width:1100px;
+         background:transparent; color:#eaf0fa; }
+  .hdr { display:flex; align-items:center; gap:12px; padding:14px 16px;
+         border-bottom:1px solid rgba(34,211,238,.22); position:sticky; top:0;
+         background:rgba(7,11,28,.92); z-index:5; }
+  .hdr img { width:38px; height:38px; object-fit:contain; }
+  .hdr .title { font-size:21px; font-weight:800; flex:1; }
+  .hdr .upd { font-size:12px; color:#8195b5; }
+
+  .next { margin:14px 16px; border-radius:18px; padding:16px;
+          background:linear-gradient(135deg,var(--accent-soft),rgba(13,20,44,.55));
+          border:1px solid var(--accent);
+          box-shadow:0 0 22px var(--accent-soft), 0 6px 20px rgba(0,0,0,.5); }
+  .next .lbl { font-size:12px; letter-spacing:1.2px; font-weight:800; color:var(--accent);
+               margin-bottom:12px; text-shadow:0 0 10px var(--accent-soft); }
+  .matchup { display:flex; align-items:center; justify-content:center; gap:18px; }
+  .matchup img { width:62px; height:62px; object-fit:contain; }
+  .matchup .vs { font-size:20px; font-weight:800; color:#9fb2d0; }
+  .next .meta { text-align:center; margin-top:12px; font-size:17px; font-weight:700; }
+  .next .sub  { text-align:center; margin-top:5px; font-size:14px; color:#aebdd6; line-height:1.5; }
+
+  .sec { padding:14px 16px 4px; font-size:13px; letter-spacing:.6px; color:#8fb0e8; font-weight:800; }
+  .g { display:flex; align-items:center; gap:12px; margin:8px 16px; padding:10px 13px;
+       background:rgba(13,20,44,.72); border:1px solid rgba(96,165,250,.18); border-radius:14px;
+       box-shadow:0 4px 12px rgba(0,0,0,.4); }
+  .g.now { border-color:var(--accent); background:rgba(20,28,60,.85);
+           box-shadow:0 0 16px var(--accent-soft), 0 4px 12px rgba(0,0,0,.4); }
+  .g.past { opacity:.55; }
+  .g .wk { width:56px; flex:none; font-size:12px; font-weight:800; color:#8fb0e8; line-height:1.25; }
+  .g img { width:36px; height:36px; flex:none; object-fit:contain; }
+  .g .who { flex:1; min-width:0; }
+  .g .who .t { font-size:16px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .g .who .d { font-size:13px; color:#9fb2d0; margin-top:2px; }
+  .g .right { text-align:right; flex:none; }
+  .tag { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.5px;
+         border-radius:20px; padding:3px 9px; }
+  .tag.home { background:rgba(63,201,176,.20); color:#5fe0c6; border:1px solid rgba(63,201,176,.45); }
+  .tag.away { background:rgba(143,176,232,.16); color:#9fb2d0; border:1px solid rgba(143,176,232,.35); }
+  .net { font-size:13px; color:#cfe0ff; font-weight:700; margin-top:5px; }
+  .res { font-size:16px; font-weight:800; margin-top:4px; }
+  .res.W { color:#5fe0c6; } .res.L { color:#f07a6a; } .res.T { color:#f0c14a; }
+  .bye { margin:8px 16px; padding:9px 13px; border-radius:12px; text-align:center;
+         font-size:13px; font-weight:700; color:#8195b5; border:1px dashed rgba(143,176,232,.28); }
+  #msg { padding:28px; text-align:center; color:#9fb2d0; }
+
+  /* Back button lives in the page, not in a lovelace card -- a panel view stretches
+     a trailing button-card to ~195px and shoves the view past the viewport. */
+  #pad { height:78px; }
+  #back { position:fixed; left:0; right:0; bottom:0; padding:10px 16px;
+          background:linear-gradient(to top, #070b1c 72%, rgba(7,11,28,0)); }
+  #back button { display:flex; align-items:center; justify-content:center; gap:10px;
+          width:100%; max-width:1100px; margin:0 auto; height:54px;
+          border:1px solid rgba(34,211,238,.65); border-radius:14px;
+          background:rgba(13,20,44,.92); color:#7ee7f7; font-size:17px;
+          font-weight:800; font-family:inherit; cursor:pointer;
+          box-shadow:0 0 16px rgba(34,211,238,.30); text-shadow:0 0 8px rgba(34,211,238,.5); }
+  #back button:active { background:rgba(34,211,238,.20); }
+</style>
+</head>
+<body>
+<div id="app"><div id="msg">Loading schedule…</div></div>
+<div id="pad"></div>
+<div id="back"><button onclick="goHome()">🏠 &nbsp;←  Back to Home</button></div>
+<script>
+// Written every 15 min by /config/bin/gameday.py (HA command_line sensors).
+const TEAM = (new URLSearchParams(location.search).get('team') || 'bengals').replace(/[^a-z0-9_-]/gi, '');
+const SRC = '/local/' + TEAM + '_schedule.json';
+
+// Same-origin (/local/ is served by HA), so climbing out of the iframe is allowed.
+function goHome(){
+  try { window.top.location.href = '/el-dashboardio/0'; }
+  catch(e) { window.location.href = '/el-dashboardio/0'; }
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function hexToRgba(hex, a){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  if (!m) return 'rgba(251,79,20,' + a + ')';
+  return 'rgba(' + parseInt(m[1],16) + ',' + parseInt(m[2],16) + ',' + parseInt(m[3],16) + ',' + a + ')';
+}
+
+function fmtDate(iso, timeValid){
+  const d = new Date(iso);
+  const day = d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+  if (timeValid === false) return day + ' · Time TBD';
+  return day + ' · ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+}
+
+function render(D){
+  const games = D.games || [];
+  document.documentElement.style.setProperty('--accent', D.accent || '#fb4f14');
+  document.documentElement.style.setProperty('--accent-soft', hexToRgba(D.accent, 0.20));
+  document.title = (D.title || 'Team') + ' Schedule';
+
+  const cur = games.find(g => g.id === D.current_id) || games[0];
+  let html = '<div class="hdr">'
+    + '<img src="' + esc(D.us_logo || '') + '" alt="">'
+    + '<div class="title">' + esc(D.title || '') + ' Schedule</div>'
+    + '<div class="upd">' + (D.updated ? 'updated ' + new Date(D.updated).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '') + '</div>'
+    + '</div>';
+
+  if (cur){
+    const live = cur.game_state === 'in', done = cur.game_state === 'post';
+    html += '<div class="next"><div class="lbl">'
+      + (live ? '● LIVE NOW' : done ? 'LATEST RESULT' : 'NEXT GAME') + '</div>'
+      + '<div class="matchup">'
+      + '<img src="' + esc(cur.us_logo) + '" alt="">'
+      + '<div class="vs">' + esc(cur.vs_at) + '</div>'
+      + '<img src="' + esc(cur.opp_logo) + '" alt=""></div>'
+      + '<div class="meta">';
+    if (live || done){
+      html += esc(cur.us_abbr) + ' ' + (cur.score_us != null ? cur.score_us : '-') + ' — '
+            + (cur.score_them != null ? cur.score_them : '-') + ' ' + esc(cur.opp_abbr)
+            + (done && cur.result ? ' (' + cur.result + ')' : '');
+    } else {
+      html += fmtDate(cur.kickoff_iso, cur.time_valid);
+    }
+    html += '</div><div class="sub">' + esc(cur.opponent)
+      + '<br>' + esc(cur.week_text) + ' · ' + esc(cur.home_away_label) + ' · ' + esc(cur.venue)
+      + '<br>📺 ' + esc(cur.network) + '</div></div>';
+  }
+
+  let lastWeek = 0;
+  html += '<div class="sec">FULL SCHEDULE</div>';
+  for (const g of games){
+    // bye weeks simply have no game -- surface the gap so the jump isn't confusing
+    const wkNum = parseInt((g.week_text.match(/Week (\d+)/) || [])[1] || '0');
+    if (g.season_type !== 'Preseason' && wkNum && lastWeek && wkNum > lastWeek + 1){
+      for (let w = lastWeek + 1; w < wkNum; w++)
+        html += '<div class="bye">Week ' + w + ' · BYE</div>';
+    }
+    if (wkNum) lastWeek = wkNum;
+
+    const past = g.game_state === 'post', now = g.id === D.current_id;
+    html += '<div class="g' + (now ? ' now' : '') + (past && !now ? ' past' : '') + '">'
+      + '<div class="wk">' + esc(g.week_text.replace('Preseason ', 'PRE ').replace('Week ', 'WK ')) + '</div>'
+      + '<img src="' + esc(g.opp_logo) + '" alt="">'
+      + '<div class="who"><div class="t">' + esc(g.vs_at) + ' ' + esc(g.opponent_short || g.opponent) + '</div>'
+      + '<div class="d">' + fmtDate(g.kickoff_iso, g.time_valid) + '</div></div>'
+      + '<div class="right"><span class="tag ' + (g.home_away === 'home' ? 'home' : 'away') + '">'
+      + esc(g.home_away_label) + '</span>';
+    if (past && g.result){
+      html += '<div class="res ' + g.result + '">' + g.result + ' ' + g.score_us + '-' + g.score_them + '</div>';
+    } else {
+      html += '<div class="net">' + esc(g.network) + '</div>';
+    }
+    html += '</div></div>';
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+async function load(){
+  try {
+    const r = await fetch(SRC + '?t=' + Date.now());
+    render(await r.json());
+  } catch(e){
+    document.getElementById('app').innerHTML =
+      '<div id="msg">Schedule not available yet.<br>It fills in the next time Home Assistant polls ESPN.</div>';
+  }
+}
+load();
+setInterval(load, 300000);
+</script>
+</body>
+</html>

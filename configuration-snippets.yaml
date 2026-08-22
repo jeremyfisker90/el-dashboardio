@@ -1,0 +1,147 @@
+# Add these blocks to your Home Assistant configuration.yaml.
+# Scripts referenced here live in /config/bin/ (copy gameday.py and
+# chores_totals.py there and chmod +x them).
+
+# Loads Google Fonts at the document level so shadow-DOM cards can use them
+# (a plain @font-face inside card-mod shadow styles does NOT load).
+frontend:
+  extra_module_url:
+    - /local/font_loader.js
+
+command_line:
+  # Next-game sensor, one per team. Args: <league> <espn-team-id> <slug> <title> <accent>
+  # Find your team id at site.api.espn.com/apis/site/v2/sports/<sport>/<league>/teams
+  - sensor:
+      name: Bengals Next Game
+      unique_id: bengals_next_game
+      command: 'python3 /config/bin/gameday.py nfl 4 bengals "Bengals" "#fb4f14"'
+      scan_interval: 120
+      command_timeout: 90
+      value_template: "{{ value_json.state }}"
+      json_attributes: &gameday_attrs
+        - has_game
+        - title
+        - accent
+        - opponent
+        - opponent_short
+        - opp_abbr
+        - opp_logo
+        - us_abbr
+        - us_logo
+        - home_away
+        - home_away_label
+        - vs_at
+        - kickoff_iso
+        - time_valid
+        - network
+        - venue
+        - week_text
+        - season_type
+        - game_state
+        - status_detail
+        - score_us
+        - score_them
+        - result
+  - sensor:
+      name: Buckeyes Next Game
+      unique_id: buckeyes_next_game
+      command: 'python3 /config/bin/gameday.py college-football 194 buckeyes "Buckeyes" "#bb0000"'
+      scan_interval: 120
+      command_timeout: 90
+      value_template: "{{ value_json.state }}"
+      json_attributes: *gameday_attrs
+
+  # Today's dinner, read from a Cozi list named "Dinners" whose items look
+  # like "Friday: Salmon" (fed to the Weekly Meal Plan tile).
+  - sensor:
+      name: Todays Dinner
+      unique_id: todays_dinner
+      command: "python3 /config/bin/dinner_today.py"
+      scan_interval: 300
+      command_timeout: 30
+      value_template: "{{ value_json.state }}"
+      json_attributes:
+        - meal
+
+  # Weekly points totals for the Chores + Grand Champion tiles.
+  # Talks to the chores add-on: https://github.com/jeremyfisker90/cozi-proxy-addon
+  - sensor:
+      name: Chores Points
+      unique_id: chores_points
+      command: "python3 /config/bin/chores_totals.py"
+      scan_interval: 60
+      command_timeout: 30
+      value_template: "{{ value_json.state }}"
+      json_attributes:
+        - ok
+        - ian
+        - evan
+        - target
+        - required_left
+        - required_total
+        - optional_unlocked
+        - open_required
+        - open_optional
+        - done_ian
+        - done_evan
+        - pts_open
+        - leader
+        - streak_kid
+        - streak_weeks
+        - total_ian
+        - total_evan
+        - total_weeks
+        - pending
+        - queued_ian
+        - queued_evan
+
+# ---------------------------------------------------------------------------
+# GOOGLE MODE (running without Cozi)
+#
+# Everything works without a Cozi account:
+#
+# 1) CHORES — in the add-on configuration set cozi_enabled: false (or just
+#    leave username/password blank). The chores board then syncs with the
+#    published Google Sheet only; claiming, points, rotation, rejections,
+#    streaks and the Grand Champion all work unchanged.
+#
+# 2) TODAY'S DINNER — instead of the Cozi "Dinners" list, put meals on a
+#    Google Calendar as events titled like "Dinner: Tacos", and use this
+#    TEMPLATE sensor in place of the command_line "Todays Dinner" above
+#    (this block goes under template:, not command_line:). It publishes the
+#    same entity + attribute, so the dashboard tile needs no changes:
+#
+#    - triggers:
+#        - trigger: time_pattern
+#          minutes: "/15"
+#        - trigger: homeassistant
+#          event: start
+#      actions:
+#        - action: calendar.get_events
+#          target:
+#            entity_id: calendar.your_family_calendar
+#          data:
+#            start_date_time: "{{ today_at() }}"
+#            duration:
+#              hours: 24
+#          response_variable: cal
+#      sensor:
+#        - name: Todays Dinner
+#          unique_id: todays_dinner
+#          state: >-
+#            {% set evs = cal['calendar.your_family_calendar'].events | default([])
+#               | selectattr('summary', 'search', '(?i)dinner') | list %}
+#            {{ (evs[0].summary | regex_replace('(?i)\s*dinner\s*[:\-]?\s*', '') | trim) if evs else 'none' }}
+#          attributes:
+#            meal: >-
+#              {% set evs = cal['calendar.your_family_calendar'].events | default([])
+#                 | selectattr('summary', 'search', '(?i)dinner') | list %}
+#              {{ (evs[0].summary | regex_replace('(?i)\s*dinner\s*[:\-]?\s*', '') | trim) if evs else '' }}
+#
+# 3) FAMILY CALENDAR — already platform-neutral: the agenda rail reads any HA
+#    calendar entity (Google Calendar, CalDAV, ICS...). Set yours in
+#    templates.yaml.
+#
+# 4) SHOPPING LISTS — repoint the "Cozi Shopping Lists" quick button in
+#    build_layout.py at whatever you use, or delete it.
+# ---------------------------------------------------------------------------

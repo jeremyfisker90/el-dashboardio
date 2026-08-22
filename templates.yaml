@@ -1,0 +1,106 @@
+- sensor:
+    - name: Open Doors and Windows
+      unit_of_measurement: ""
+      state: "{{ states.binary_sensor | selectattr('attributes.device_class', 'in', ['door', 'window']) | selectattr('state', 'eq', 'on') | list | count }}"  # Counts open (state 'on')
+      state_class: measurement  # Allows graphing/history
+      icon: >-
+        {% set count = states.binary_sensor | selectattr('attributes.device_class', 'in', ['door', 'window']) | selectattr('state', 'eq', 'on') | list | count %}
+        {% if count > 0 %} mdi:door-open {% else %} mdi:door-closed {% endif %}  # Dynamic icon
+      attributes:
+        open_entities: >-
+          {{ states.binary_sensor | selectattr('attributes.device_class', 'in', ['door', 'window']) | selectattr('state', 'eq', 'on') | map(attribute='entity_id') | list }}  # List of open ones
+    # Rejected-chore count, for the pinned "N TO FIX" pill on every sub-view
+    - name: Chores Pending
+      unique_id: chores_pending
+      state: "{{ state_attr('sensor.chores_points', 'pending') | int(0) }}"
+# Dinners This Week: pulls events containing "dinner" from the Cozi family calendar
+- triggers:
+    - trigger: time_pattern
+      minutes: "/15"
+    - trigger: homeassistant
+      event: start
+    - trigger: event
+      event_type: event_template_reloaded
+  actions:
+    - action: calendar.get_events
+      target:
+        entity_id: calendar.the_family_cozi
+      data:
+        start_date_time: "{{ today_at() }}"
+        duration:
+          days: 14
+      response_variable: agenda
+  sensor:
+    - name: Dinners This Week
+      unique_id: dinners_this_week
+      icon: mdi:silverware-fork-knife
+      state: >-
+        {{ agenda['calendar.the_family_cozi']['events']
+           | selectattr('summary', 'search', '(?i)dinner') | list | count }}
+      attributes:
+        dinners: >-
+          {{ agenda['calendar.the_family_cozi']['events']
+             | selectattr('summary', 'search', '(?i)dinner') | list }}
+
+# Hourly forecast (next 10h) for the styled bar card
+- triggers:
+    - trigger: time_pattern
+      minutes: "/15"
+    - trigger: homeassistant
+      event: start
+    - trigger: event
+      event_type: event_template_reloaded
+  actions:
+    - action: weather.get_forecasts
+      target:
+        entity_id: weather.forecast_home_2
+      data:
+        type: hourly
+      response_variable: hf
+  sensor:
+    - name: Hourly Forecast Home
+      unique_id: hourly_forecast_home
+      state: "{{ hf['weather.forecast_home_2'].forecast | count }}"
+      attributes:
+        hours: "{{ hf['weather.forecast_home_2'].forecast[:9] }}"
+
+# Today's schedule events (for the custom color-coded day timeline)
+- triggers:
+    - trigger: time_pattern
+      minutes: "/10"
+    - trigger: homeassistant
+      event: start
+    - trigger: event
+      event_type: event_template_reloaded
+  actions:
+    - action: calendar.get_events
+      target:
+        entity_id:
+          - calendar.parent_gmail_com
+          - calendar.the_family_cozi
+          - calendar.kids_football_games
+      data:
+        start_date_time: "{{ today_at('00:00') }}"
+        duration:
+          days: 14
+      response_variable: cal
+  sensor:
+    - name: Today Schedule
+      unique_id: today_schedule
+      state: >
+        {{ (cal['calendar.parent_gmail_com'].events | default([]) | length)
+         + (cal['calendar.the_family_cozi'].events | default([]) | length)
+         + (cal['calendar.kids_football_games'].events | default([]) | length) }}
+      attributes:
+        events: >
+          {% set ns = namespace(out=[]) %}
+          {% for e in cal['calendar.parent_gmail_com'].events | default([]) %}
+            {% set ns.out = ns.out + [dict(e, cal='dad')] %}
+          {% endfor %}
+          {% for e in cal['calendar.the_family_cozi'].events | default([]) %}
+            {% set ns.out = ns.out + [dict(e, cal='cozi')] %}
+          {% endfor %}
+          {% for e in cal['calendar.kids_football_games'].events | default([]) %}
+            {% set ns.out = ns.out + [dict(e, cal='ian')] %}
+          {% endfor %}
+          {{ ns.out }}

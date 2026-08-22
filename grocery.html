@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopping Lists</title>
+<style>
+  body { font-family:'Segoe UI',Roboto,sans-serif; margin:0; color:#eaf0fa;
+         background:#070b1c;
+         background-image:radial-gradient(900px 500px at 20% -10%, rgba(168,85,247,.14), transparent 60%),
+                          radial-gradient(800px 600px at 110% 20%, rgba(34,211,238,.12), transparent 60%),
+                          radial-gradient(900px 500px at 60% 110%, rgba(34,197,94,.08), transparent 60%);
+         background-attachment:fixed; }
+  .hdr { display:flex; align-items:center; gap:12px; padding:14px 16px;
+         border-bottom:1px solid rgba(168,85,247,.30); flex-wrap:wrap; }
+  .hdr .title { font-size:20px; font-weight:800; flex:1; letter-spacing:.4px;
+                text-shadow:0 0 12px rgba(168,85,247,.6); }
+  .back { background:rgba(168,85,247,.16); color:#e9d5ff; border:1px solid rgba(168,85,247,.55);
+          border-radius:10px; padding:8px 14px; font-size:15px; font-weight:800; cursor:pointer;
+          box-shadow:0 0 10px rgba(168,85,247,.25); }
+  .picker { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; padding:16px; }
+  .listbtn { background:rgba(13,20,44,.8); border:1px solid rgba(168,85,247,.45); border-radius:16px;
+             padding:16px 14px; color:#eaf0fa; cursor:pointer; text-align:left; min-width:0;
+             box-shadow:0 0 16px rgba(168,85,247,.18), 0 4px 16px rgba(0,0,0,.5); }
+  .listbtn:active { background:rgba(168,85,247,.14); }
+  .listbtn .nm { display:flex; align-items:center; gap:9px; font-size:19px; font-weight:800; }
+  .logos { display:inline-flex; gap:8px; align-items:center; vertical-align:middle; flex:none; }
+  .logos .chip { background:#fff; border-radius:10px; padding:5px 10px; display:flex; align-items:center;
+                 box-shadow:0 0 12px rgba(255,255,255,.30), 0 2px 6px rgba(0,0,0,.4); }
+  .logos .chip img { height:34px; width:auto; max-width:130px; display:block; }
+  .emo { font-size:27px; line-height:1; }
+  .listbtn .cnt { font-size:12px; font-weight:800; color:#e9d5ff; background:rgba(168,85,247,.16);
+                  border:1px solid rgba(168,85,247,.5); border-radius:20px; padding:2px 10px;
+                  margin-left:auto; box-shadow:0 0 8px rgba(168,85,247,.25); }
+  .listbtn .prev { margin-top:8px; font-size:12.5px; color:#aebdd6; line-height:1.5;
+                   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .listbtn .prev b { color:#7ee7f7; font-weight:800; }
+  .add-row { display:flex; gap:10px; padding:12px 16px; }
+  .add-row input { flex:1; background:#0a1226; border:2px solid rgba(168,85,247,.4); color:#eaf0fa;
+                   border-radius:10px; padding:11px 12px; font-size:16px; outline:none; }
+  .add-row button { background:rgba(168,85,247,.2); color:#e9d5ff; border:1px solid rgba(168,85,247,.6);
+                    border-radius:10px; width:52px; font-size:26px; cursor:pointer;
+                    box-shadow:0 0 10px rgba(168,85,247,.3); }
+  .sect { margin:10px 16px 2px; padding:5px 12px; font-size:12px; letter-spacing:1px; font-weight:900;
+          color:#7ee7f7; background:linear-gradient(90deg, rgba(34,211,238,.16), rgba(34,211,238,.02));
+          border-left:3px solid #22d3ee; border-radius:8px;
+          text-shadow:0 0 8px rgba(34,211,238,.5); }
+  .item { display:flex; align-items:center; gap:12px; margin:6px 16px; padding:10px 13px;
+          background:rgba(13,20,44,.72); border:1px solid rgba(96,165,250,.16); border-radius:12px;
+          box-shadow:0 3px 10px rgba(0,0,0,.4); }
+  .item .box { width:24px; height:24px; border:2px solid rgba(168,85,247,.7); border-radius:7px; flex:none;
+               cursor:pointer; display:flex; align-items:center; justify-content:center;
+               font-size:15px; color:#5eead4; }
+  .item.done { opacity:.5; }
+  .item.done .box { border-color:rgba(45,212,191,.8); background:rgba(45,212,191,.14);
+                    box-shadow:0 0 8px rgba(45,212,191,.4); }
+  .item .txt { flex:1; font-size:16px; font-weight:600; }
+  .item.done .txt { text-decoration:line-through; }
+  .item .del { color:#8195b5; font-size:19px; cursor:pointer; padding:2px 4px; }
+  .head { margin:14px 16px 2px; font-size:12px; letter-spacing:.8px; font-weight:900; color:#5eead4;
+          text-shadow:0 0 8px rgba(45,212,191,.5); }
+  #msg { padding:22px; text-align:center; color:#9fb2d0; }
+  #msg button { margin-top:10px; background:rgba(168,85,247,.2); color:#e9d5ff;
+                border:1px solid rgba(168,85,247,.6); border-radius:10px; padding:9px 20px;
+                font-size:15px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app"><div id="msg">Loading lists…</div></div>
+<script>
+const API = 'http://' + location.hostname + ':5000';
+// Which shopping lists to feature at the top of the picker (case-insensitive). Others still show after.
+const FEATURED = ['kroger','costco',"home depot/lowe's"];
+// Store-brand logo chips (SVGs in /local/logos/). A list can carry several logos
+// when one list captures runs to more than one store.
+const BRANDS = [
+  [/kroger/i,             ['kroger','aldi']],
+  [/costco/i,             ['costco']],
+  [/home ?depot|lowe/i,   ['homedepot','lowes']],
+];
+const EMOJI = [
+  [/christmas/i,'🎄'], [/spring break/i,'🏖️'], [/\brv\b|camp/i,'🚐'],
+  [/punch|improvement/i,'🔨'], [/summer/i,'☀️'], [/recipe/i,'🥘'],
+  [/dinner/i,'🍽️'], [/points/i,'⭐'], [/target/i,'🎯'], [/walmart/i,'🏬'],
+];
+let LISTS = [];
+
+async function api(path, body, _retried){
+  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  const r = await fetch(API + path, opt);
+  if (r.status === 503 && !_retried){                 // session expired -> silently reconnect + retry once
+    try { await fetch(API + '/relogin', {method:'POST'}); } catch(e){}
+    return api(path, body, true);
+  }
+  if (r.status === 503) throw 'auth';
+  return r.json().catch(()=>({}));
+}
+function lid(l){ return l.listId || l.list_id; }
+function iid(i){ return i.itemId || i.item_id; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function emoji(t){ for (const [re,e] of EMOJI) if (re.test(t)) return e; return '📝'; }
+function brandFiles(t){ for (const [re,files] of BRANDS) if (re.test(t)) return files; return null; }
+// Brand lists show ONLY the logo chips (no title text) — the logo is the name.
+// If a logo file is missing, the whole span falls back to emoji + title.
+function icon(l){
+  const t = l.title||'';
+  const files = brandFiles(t);
+  if (files)
+    return '<span class="logos" data-fb="'+emoji(t)+' '+esc(t)+'">'
+      + files.map(f=>'<span class="chip"><img src="logos/'+f+'.svg" alt="" '
+        + 'onerror="var s=this.closest(\'.logos\');s.innerHTML=s.dataset.fb;"></span>').join('')
+      + '</span>';
+  return '<span class="emo">'+emoji(t)+'</span>';
+}
+
+async function loadLists(){
+  try {
+    const d = await api('/lists');
+    LISTS = (Array.isArray(d)?d:(d.lists||[]))
+      .filter(l => (l.listType||'shopping')!=='todo' || FEATURED.includes((l.title||'').toLowerCase()))
+      .filter(l => !/^chores (required|optional)$/i.test((l.title||'').trim()))
+      .filter(l => brandFiles(l.title||''));   // picker shows the store lists only
+  } catch(e) {
+    document.getElementById('app').innerHTML =
+      '<div id="msg">Cozi not connected.<br><button onclick="relogin()">Reconnect</button></div>';
+    return;
+  }
+  renderPicker();
+}
+
+function renderPicker(){
+  const app = document.getElementById('app');
+  const order = [...LISTS].sort((a,b)=>{
+    const ia=FEATURED.indexOf((a.title||'').toLowerCase()); const ib=FEATURED.indexOf((b.title||'').toLowerCase());
+    if(ia>=0&&ib>=0) return ia-ib; if(ia>=0) return -1; if(ib>=0) return 1; return 0;
+  });
+  let html = '<div class="hdr"><div class="title">🛒 Shopping Lists</div></div><div class="picker">';
+  for (const l of order){
+    const real = (l.items||[]).filter(i=>i.itemType!=='header');
+    const active = real.filter(i=>i.status!=='complete');
+    const prev = active.slice(0,3).map(i=>esc(i.text)).join(' · ');
+    const brand = brandFiles(l.title||'');
+    html += '<button class="listbtn'+(brand?' brand':'')+'" onclick="openList(\''+lid(l)+'\')">'
+          + '<div class="nm">'+icon(l)+(brand?'':' '+esc(l.title||'List'))
+          + '<span class="cnt">'+active.length+' item'+(active.length===1?'':'s')+'</span></div>'
+          + '<div class="prev">'+(active.length ? prev + (active.length>3 ? ' <b>+'+(active.length-3)+' more</b>' : '')
+                                                : '<i>Nothing needed — nice.</i>')+'</div>'
+          + '</button>';
+  }
+  html += '</div>';
+  app.innerHTML = html;
+}
+
+function openList(id){
+  const l = LISTS.find(x=>lid(x)===id);
+  if(!l) return;
+  const app = document.getElementById('app');
+  let html = '<div class="hdr"><button class="back" onclick="renderPicker()">‹ Lists</button>'
+           + '<div class="title">'+icon(l)+(brandFiles(l.title||'')?'':' '+esc(l.title||''))+'</div></div>'
+           + '<div class="add-row"><input id="addbox" placeholder="Add item…" '
+           + 'onkeydown="if(event.key===\'Enter\')addItem(\''+id+'\')">'
+           + '<button onclick="addItem(\''+id+'\')">+</button></div>';
+  const items = l.items||[];
+  // Walk in Cozi order so section headers (BREAD, PRODUCE, ...) group their items.
+  const done = [];
+  let openSection = false;
+  for (const it of items){
+    if (it.itemType === 'header'){
+      html += '<div class="sect">'+esc(it.text)+'</div>';
+      openSection = true;
+      continue;
+    }
+    if (it.status === 'complete'){ done.push(it); continue; }
+    html += itemRow(id, it, false);
+  }
+  if (done.length){
+    html += '<div class="head">✓ GOT IT ('+done.length+')</div>';
+    for (const it of done) html += itemRow(id, it, true);
+  }
+  if (!items.length) html += '<div id="msg">Nothing on this list yet.</div>';
+  app.innerHTML = html;
+  const b=document.getElementById('addbox'); if(b) b.focus();
+}
+function itemRow(id, it, done){
+  return '<div class="item'+(done?' done':'')+'">'
+    + '<div class="box" onclick="toggle(\''+id+'\',\''+iid(it)+'\','+(!done)+')">'+(done?'✓':'')+'</div>'
+    + '<div class="txt">'+ esc(it.text) +'</div>'
+    + '<div class="del" onclick="removeItem(\''+id+'\',\''+iid(it)+'\')">🗑</div></div>';
+}
+
+async function addItem(id){
+  const box=document.getElementById('addbox'); const v=(box.value||'').trim(); if(!v) return;
+  box.value='';
+  const l=LISTS.find(x=>lid(x)===id); const pos=(l.items||[]).length;
+  try{ await api('/add_item', {list_id:id, item_text:v, item_pos:pos}); }catch(e){}
+  await refresh(id);
+}
+async function toggle(id, itemId, complete){
+  try{ await api('/mark_item', {list_id:id, item_id:itemId, status: complete?'complete':'incomplete'}); }catch(e){}
+  await refresh(id);
+}
+async function removeItem(id, itemId){
+  try{ await api('/remove_items', {list_id:id, item_ids:[itemId]}); }catch(e){}
+  await refresh(id);
+}
+async function refresh(id){
+  try{ const d=await api('/lists'); LISTS=(Array.isArray(d)?d:(d.lists||[])); }catch(e){}
+  openList(id);
+}
+async function relogin(){
+  document.getElementById('app').innerHTML='<div id="msg">Reconnecting…</div>';
+  try{ await api('/relogin', {}); }catch(e){}
+  setTimeout(loadLists, 1500);
+}
+loadLists();
+setInterval(()=>{ if(!document.getElementById('addbox')) loadLists(); }, 60000);
+</script>
+</body>
+</html>
