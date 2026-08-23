@@ -24,6 +24,8 @@ from datetime import datetime, timedelta, timezone
 
 URL = ("https://site.api.espn.com/apis/site/v2/sports/football/{league}"
        "/teams/{team}/schedule?seasontype={st}")
+SUMMARY_URL = ("https://site.api.espn.com/apis/site/v2/sports/football/{league}"
+               "/summary?event={event}")
 WWW_DIR = "/config/www"
 TIMEOUT = 20
 
@@ -32,6 +34,31 @@ def fetch(league, team, seasontype):
     u = URL.format(league=league, team=team, st=seasontype)
     with urllib.request.urlopen(u, timeout=TIMEOUT) as r:
         return json.loads(r.read().decode("utf-8"))
+
+
+def fetch_summary(league, event):
+    """The schedule feed does NOT carry live scores -- a game in progress shows
+    score:null there. The summary feed does, so we hit it for the live game."""
+    u = SUMMARY_URL.format(league=league, event=event)
+    with urllib.request.urlopen(u, timeout=TIMEOUT) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def live_scores(league, event, us_id, them_id):
+    """(score_us, score_them, status_detail) for a live game, from the summary
+    feed. Returns (None, None, None) if anything is off so the caller falls back."""
+    try:
+        data = fetch_summary(league, event)
+        comp = (((data.get("header") or {}).get("competitions") or [{}])[0])
+        by_id = {}
+        for c in comp.get("competitors") or []:
+            tid = str((c.get("team") or {}).get("id"))
+            by_id[tid] = score_of(c)
+        status = (comp.get("status") or {}).get("type") or {}
+        detail = status.get("shortDetail") or status.get("detail") or None
+        return by_id.get(str(us_id)), by_id.get(str(them_id)), detail
+    except Exception:
+        return None, None, None
 
 
 def all_events(league, team):
@@ -154,6 +181,18 @@ def summarize(ev, team_id, league):
     kick = when(ev)
     s_us, s_them = score_of(us), score_of(them)
 
+    # The schedule feed carries scores only for finished games; a live game reads
+    # null there, so pull the current score (and clock) from the summary feed.
+    detail_override = None
+    if state == "in":
+        ls_us, ls_them, ls_detail = live_scores(
+            league, ev.get("id"), us_team.get("id"), opp_team.get("id"))
+        if ls_us is not None:
+            s_us = ls_us
+        if ls_them is not None:
+            s_them = ls_them
+        detail_override = ls_detail
+
     week = ev.get("week") or {}
     stype = ev.get("seasonType") or {}
     week_text = week.get("text") or ""
@@ -183,7 +222,7 @@ def summarize(ev, team_id, league):
         "week_text": week_text,
         "season_type": stype.get("name") or "",
         "game_state": state,
-        "status_detail": status.get("shortDetail") or status.get("detail") or "",
+        "status_detail": detail_override or status.get("shortDetail") or status.get("detail") or "",
         "score_us": s_us,
         "score_them": s_them,
         "result": result,
