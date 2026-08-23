@@ -489,6 +489,9 @@ REMOTES = [
     ("basement", "Basement Google TV", "remote.basement_google_tv", "chromecast", "chromecast-4k", "mdi:television"),
     ("evan", "Evan's Room TV", "remote.evan_s_room_tv", "chromecast", "chromecast-4k", "mdi:television"),
     ("backporch", "Back Porch (Roku)", "media_player.insignia_7303x_ffff", "roku", "roku-generic-tcl", "mdi:television-classic"),
+    # Fire TVs (ADB) — Firemote's native case, buttons work fully. Rename/model via user.
+    ("masterbed", "Master Bedroom FireTV", "media_player.fire_tv_192_168_1_140", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire"),
+    ("guestoffice", "Guest Room / Office FireTV", "media_player.fire_tv_192_168_1_130", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire"),
 ]
 
 
