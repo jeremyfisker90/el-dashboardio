@@ -68,7 +68,11 @@
 <body>
 <div id="app"><div id="msg">Loading lists…</div></div>
 <script>
-const API = 'http://' + location.hostname + ':5000';
+// Over https (wall tablet via the SSL proxy) the add-on is reached same-origin
+// at /cozi so it isn't blocked as mixed content; over http, hit it directly.
+const API = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://' + location.hostname + ':5000';
 // Which shopping lists to feature at the top of the picker (case-insensitive). Others still show after.
 const FEATURED = ['kroger','costco',"home depot/lowe's"];
 // Store-brand logo chips (SVGs in /local/logos/). A list can carry several logos

@@ -208,8 +208,14 @@
 <body>
 <div id="app"><div id="msg">Loading chores…</div></div>
 <script>
-let API = 'http://' + location.hostname + ':5000';
-const API_FALLBACK = 'http://192.168.1.226:5000';   // LAN address, for PCs browsing HA by another name
+// Over https (wall tablet via the SSL proxy) the add-on is same-origin at /cozi
+// (direct :5000 would be mixed-content blocked); over http, hit it directly.
+let API = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://' + location.hostname + ':5000';
+const API_FALLBACK = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://192.168.1.226:5000';   // LAN address, for PCs browsing HA by another name
 let D = null, editingId = null, formKind = 'required', formFreq = 'weekly', formWho = 'na';
 
 async function api(path, body){

@@ -85,8 +85,14 @@
 </div>
 
 <script>
-let API = 'http://' + location.hostname + ':5000';
-const API_FALLBACK = 'http://YOUR_HA_IP:5000';   // opened from a PC, not the tablet
+// Over https (wall tablet via the SSL proxy) the add-on is same-origin at /cozi
+// (direct :5000 would be mixed-content blocked); over http, hit it directly.
+let API = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://' + location.hostname + ':5000';
+const API_FALLBACK = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://YOUR_HA_IP:5000';   // opened from a PC, not the tablet
 
 const EXAMPLES = [
   'add butter to the kroger list',

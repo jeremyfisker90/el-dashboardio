@@ -4,7 +4,11 @@
  * tapping a room toggles its lights. Thermostat chip lives in the Dining Room.
  */
 
-const FP_API = "http://" + location.hostname.replace(/:.*/, "") + ":5000";
+// Over https (wall tablet via the SSL proxy) the add-on is same-origin at /cozi
+// (direct :5000 would be mixed-content blocked); over http, hit it directly.
+const FP_API = location.protocol === "https:"
+  ? location.origin + "/cozi"
+  : "http://" + location.hostname.replace(/:.*/, "") + ":5000";
 const S = 13, THICK = 16, GAP = 0.3;
 const TITLES = { floor1: "1st Floor", floor2: "2nd Floor", basement: "Lower Level" };
 
