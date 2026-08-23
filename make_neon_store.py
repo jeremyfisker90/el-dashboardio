@@ -69,7 +69,7 @@ for v in cfg["views"]:
     v.pop("sections", None)
     v["type"] = "panel"
     v["cards"] = [{"type": "vertical-stack", "cards": [
-        {"type": "iframe", "url": "/local/chores.html?v=1",
+        {"type": "iframe", "url": "/local/chores.html?v=%d" % V,
          "card_mod": {"style":
              "ha-card{height:calc(100vh - 10px)!important;border:none!important;"
              "background:transparent!important;border-radius:0!important;box-shadow:none!important;}"
