@@ -488,8 +488,9 @@ REMOTES = [
     # kind "atv"      = button D-pad driven by the Android TV Remote (no ADB).
     ("screenedporch", "Screened Porch", "remote.travel_google_tv", "", "", "mdi:television", "atv"),
     ("familyroom", "Family Room TV", "media_player.android_tv_192_168_1_58", "chromecast", "chromecast-4k", "mdi:television", "firemote"),
-    ("basement", "Basement Google TV", "remote.basement_google_tv", "", "", "mdi:television", "atv"),
-    ("evan", "Evan's Room TV", "remote.evan_s_room_tv", "", "", "mdi:television", "atv"),
+    ("workout", "Workout Room TV", "media_player.android_tv_192_168_1_178", "chromecast", "chromecast-4k", "mdi:dumbbell", "firemote"),
+    ("basement", "Basement Google TV", "media_player.android_tv_192_168_1_91", "chromecast", "chromecast-4k", "mdi:television", "firemote"),
+    ("evan", "Evan's Room TV", "media_player.android_tv_192_168_1_84", "chromecast", "chromecast-4k", "mdi:television", "firemote"),
     ("backporch", "Back Porch (Roku)", "media_player.insignia_7303x_ffff", "roku", "roku-generic-tcl", "mdi:television-classic", "firemote"),
     ("masterbed", "Master Bedroom FireTV", "media_player.fire_tv_192_168_1_140", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire", "firemote"),
     ("guestoffice", "Guest Room / Office FireTV", "media_player.fire_tv_192_168_1_130", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire", "firemote"),
