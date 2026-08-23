@@ -122,7 +122,11 @@ class VoiceMicCard extends HTMLElement {
     this._ans = box.querySelector('.nvm-ans');
     this._foot = box.querySelector('.nvm-foot');
 
-    if (SR && window.isSecureContext) this._listen();
+    // SpeechRecognition (webkitSpeechRecognition) uses the native recognizer, not
+    // getUserMedia, so it works on a plain-http origin inside Fully Kiosk (which
+    // grants the mic). Don't gate on isSecureContext — just try it; onerror in
+    // _listen() handles a genuine refusal (e.g. desktop Chrome on http).
+    if (SR) this._listen();
     else this._noMic();
   }
 
