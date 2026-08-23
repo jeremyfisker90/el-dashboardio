@@ -726,7 +726,7 @@ ROWS = [
     {"type": "horizontal-stack", "cards": [game_tile(*t) for t in TEAMS]},
     {"type": "horizontal-stack", "cards": [
         menu_live(LIGHT_MENU_JS, "lighting", LBLUE, triggers="all"),
-        menu("Entertainment", "mdi:television-play", "entertainment", PURPLE),
+        menu("Remotes", "mdi:remote", "remotes", PURPLE),
         menu_live(THERMO_JS, "environment", CYAN,
                   entity="climate.nest_thermostat",
                   triggers=["climate.nest_thermostat", "weather.forecast_home_2"]),

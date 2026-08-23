@@ -479,6 +479,86 @@ for v in cfg["views"]:
         pinned({}),
     ]}]
 
+# ---------------------------------------------------- Remotes: Firemote per TV
+# "Remotes" menu tile -> a picker of the TVs; tap one -> a subview with that
+# TV's graphical Firemote remote. (Firemote card is a HACS resource.)
+REMOTES = [
+    # slug, label, entity, device_family, device_type, icon
+    ("travel", "Travel Google TV", "remote.travel_google_tv", "chromecast", "chromecast-4k", "mdi:television"),
+    ("familyroom", "Family Room TV", "remote.family_room_tv", "chromecast", "chromecast-4k", "mdi:television"),
+    ("basement", "Basement Google TV", "remote.basement_google_tv", "chromecast", "chromecast-4k", "mdi:television"),
+    ("evan", "Evan's Room TV", "remote.evan_s_room_tv", "chromecast", "chromecast-4k", "mdi:television"),
+    ("backporch", "Back Porch (Roku)", "media_player.insignia_7303x_ffff", "roku", "roku-generic-tcl", "mdi:television-classic"),
+]
+
+
+def _remote_btn(slug, label, icon):
+    return {"type": "custom:button-card", "name": label, "icon": icon,
+            "show_icon": True, "show_name": True,
+            "tap_action": {"action": "navigate",
+                           "navigation_path": "/el-dashboardio/remote-" + slug},
+            "styles": {"card": [{"background-color": "rgba(13,20,44,0.85)"},
+                                {"border": "1px solid rgba(168,85,247,0.5)"},
+                                {"border-radius": "16px"},
+                                {"box-shadow": "0 0 16px rgba(168,85,247,0.25)"},
+                                {"height": "112px"}, {"margin": "6px"}, {"padding": "8px"}],
+                       "name": [{"font-size": "15px"}, {"font-weight": "800"},
+                                {"color": "#eaf0fa"}, {"white-space": "normal"},
+                                {"line-height": "1.1"}, {"margin-top": "6px"}],
+                       "icon": [{"--mdc-icon-size": "40px"}, {"color": "#c4b5fd"},
+                                {"filter": "drop-shadow(0 0 8px rgba(168,85,247,0.8))"}]}}
+
+
+REMOTES_VIEW = {
+    "title": "Remotes", "path": "remotes", "subview": True, "icon": "mdi:remote",
+    "theme": "YOUR_THEME", "type": "panel",
+    "cards": [{"type": "vertical-stack", "cards": [
+        {"type": "custom:button-card", "show_icon": True, "icon": "mdi:remote",
+         "name": "TV REMOTES", "tap_action": {"action": "none"},
+         "styles": {"card": [{"background": "transparent"}, {"box-shadow": "none"},
+                             {"border": "none"}, {"padding": "6px 0 2px"}],
+                    "name": [{"font-size": "18px"}, {"font-weight": "900"},
+                             {"letter-spacing": "1.5px"}, {"color": "#d8b4fe"},
+                             {"text-shadow": "0 0 10px rgba(168,85,247,0.6)"}],
+                    "icon": [{"--mdc-icon-size": "26px"}, {"color": "#d8b4fe"}]}},
+        {"type": "grid", "columns": 3, "square": False,
+         "cards": [_remote_btn(s, lbl, ic) for s, lbl, _, _, _, ic in REMOTES]},
+        pinned({}),
+    ]}],
+}
+cfg["views"] = [v for v in cfg["views"] if v.get("path") != "remotes"]
+cfg["views"].append(REMOTES_VIEW)
+
+for slug, label, entity, fam, dtype, _ in REMOTES:
+    path = "remote-" + slug
+    fire = {"type": "custom:firemote-card", "entity": entity,
+            "device_family": fam, "device_type": dtype, "compatibility_mode": "default",
+            "card_mod": {"style": "ha-card{background:transparent!important;"
+                                  "border:none!important;box-shadow:none!important;}"}}
+    if entity.startswith("remote."):          # link the Android TV Remote entity
+        fire["android_tv_remote_entity"] = entity
+    cfg["views"] = [v for v in cfg["views"] if v.get("path") != path]
+    cfg["views"].append({
+        "title": label, "path": path, "subview": True, "icon": "mdi:remote",
+        "theme": "YOUR_THEME", "type": "panel",
+        "cards": [{"type": "vertical-stack", "cards": [
+            {"type": "custom:button-card", "name": label, "tap_action": {"action": "none"},
+             "styles": {"card": [{"background": "transparent"}, {"box-shadow": "none"},
+                                 {"border": "none"}, {"padding": "8px 0 2px"}],
+                        "name": [{"font-size": "17px"}, {"font-weight": "900"},
+                                 {"color": "#d8b4fe"}, {"letter-spacing": "1px"}]}},
+            fire,
+            {"type": "custom:button-card", "name": "Back to Remotes", "icon": "mdi:arrow-left",
+             "tap_action": {"action": "navigate", "navigation_path": "/el-dashboardio/remotes"},
+             "styles": {"card": [{"background-color": "rgba(13,20,44,0.9)"},
+                                 {"border": "1px solid rgba(168,85,247,0.55)"},
+                                 {"border-radius": "14px"}, {"height": "46px"},
+                                 {"margin": "10px auto 0"}, {"max-width": "260px"}],
+                        "name": [{"color": "#d8b4fe"}, {"font-size": "14px"}, {"font-weight": "800"}],
+                        "icon": [{"color": "#d8b4fe"}, {"--mdc-icon-size": "20px"}]}},
+        ]}],
+    })
+
 # ---------------------------------------------------- cameras: alarm.com link
 for v in cfg["views"]:
     if v.get("path") != "cameras":
