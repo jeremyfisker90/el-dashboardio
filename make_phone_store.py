@@ -49,42 +49,105 @@ CALENDARS = [
 ]
 
 # ------------------------------------------------------------------ home tiles
-def big_tile(label, icon, path, color, glow):
-    """One large finger-target that fills half the screen width and height."""
+def tile(label, icon, path, color, glow, height, icon_size=44, name_size=15):
+    """A finger-target tile: big glowing icon over an uppercase label."""
     return {
         "type": "custom:button-card", "name": label, "icon": icon,
         "show_icon": True, "show_name": True,
         "tap_action": {"action": "navigate", "navigation_path": NP + path},
         "styles": {
-            "card": [{"height": "calc((100vh - 96px) / 2)"}, {"margin": "5px"},
-                     {"border-radius": "26px"},
+            "card": [{"height": height}, {"margin": "5px"}, {"border-radius": "22px"},
                      {"background": "linear-gradient(160deg, rgba(13,20,44,0.96), rgba(8,12,28,0.96))"},
                      {"border": "1.5px solid %s" % glow},
-                     {"box-shadow": "0 0 22px %s, inset 0 0 30px rgba(0,0,0,0.5)" % color}],
+                     {"box-shadow": "0 0 18px %s, inset 0 0 24px rgba(0,0,0,0.5)" % color}],
             "grid": [{"grid-template-areas": '"i" "n"'},
                      {"grid-template-rows": "1fr auto"},
                      {"align-items": "center"}, {"justify-items": "center"},
-                     {"row-gap": "6px"}, {"padding-bottom": "16px"}],
-            "icon": [{"--mdc-icon-size": "84px"}, {"color": color},
-                     {"filter": "drop-shadow(0 0 16px %s)" % glow}],
-            "name": [{"font-size": "23px"}, {"font-weight": "900"},
-                     {"letter-spacing": "1.5px"}, {"text-transform": "uppercase"},
-                     {"color": "#eaf0fa"}, {"text-shadow": "0 0 12px %s" % color}],
+                     {"row-gap": "4px"}, {"padding-bottom": "12px"}],
+            "icon": [{"--mdc-icon-size": "%dpx" % icon_size}, {"color": color},
+                     {"filter": "drop-shadow(0 0 14px %s)" % glow}],
+            "name": [{"font-size": "%dpx" % name_size}, {"font-weight": "900"},
+                     {"letter-spacing": "1.2px"}, {"text-transform": "uppercase"},
+                     {"color": "#eaf0fa"}, {"text-shadow": "0 0 10px %s" % color}],
         },
     }
 
+
+# ------------------------------------------------------------ chores summary card
+# Full-width, rich summary read live off sensor.chores_points (the same sensor
+# the tablet's chores hero + Grand Champion use). Tap -> the full job board.
+CHORES_SUMMARY_JS = """[[[
+  var a = (states['sensor.chores_points'] || {}).attributes || {};
+  var ian = +a.ian||0, evan = +a.evan||0;
+  var ti = +a.total_ian||0, te = +a.total_evan||0, tw = +a.total_weeks||1;
+  var qi = +a.queued_ian||0, qe = +a.queued_evan||0;
+  var di = +a.done_ian||0, de = +a.done_evan||0;
+  var avail = (+a.open_required||0) + (+a.open_optional||0);
+  var pts = +a.pts_open||0, reqLeft = +a.required_left||0;
+  var unlocked = a.optional_unlocked;
+  var champ = ti===te ? 'Neck & Neck' : (ti>te ? 'Ian' : 'Evan');
+  var champCol = ti===te ? '#e5e7eb' : (ti>te ? '#2dd4bf' : '#fbbf24');
+  var wLead = ian===evan ? '' : (ian>evan ? 'ian' : 'evan');
+  var TEAL='#2dd4bf', GOLD='#fbbf24';
+  function kid(name, col, score, q, done, lead){
+    return '<div style="flex:1;background:linear-gradient(160deg,'+col+'22,rgba(8,12,28,0.92));'
+      + 'border:1.5px solid '+col+'99;border-radius:18px;padding:12px 6px 10px;text-align:center;position:relative;">'
+      + (lead?'<div style="position:absolute;top:6px;right:9px;font-size:22px;filter:drop-shadow(0 0 6px '+col+');">👑</div>':'')
+      + '<div style="font-size:15px;font-weight:900;letter-spacing:1.5px;color:'+col+';text-shadow:0 0 8px '+col+';">'+name+'</div>'
+      + '<div style="font-size:52px;font-weight:900;line-height:1;color:#fff;text-shadow:0 0 16px '+col+';margin:3px 0 3px;">'+score+'</div>'
+      + '<div style="font-size:11px;font-weight:700;color:#cbd5e1;letter-spacing:0.5px;">POINTS THIS WEEK</div>'
+      + '<div style="display:flex;gap:6px;margin-top:9px;justify-content:center;">'
+      +   '<span style="background:rgba(0,0,0,0.45);border-radius:11px;padding:4px 9px;font-size:11.5px;font-weight:800;color:#e2e8f0;">📋 '+q+' queued</span>'
+      +   '<span style="background:rgba(0,0,0,0.45);border-radius:11px;padding:4px 9px;font-size:11.5px;font-weight:800;color:#e2e8f0;">✓ '+done+' done</span>'
+      + '</div></div>';
+  }
+  return '<div style="width:100%;box-sizing:border-box;padding:14px 13px 15px;display:flex;flex-direction:column;height:100%;justify-content:space-between;white-space:normal;">'
+    + '<div style="text-align:center;">'
+    +   '<div style="font-size:13px;font-weight:900;letter-spacing:2.5px;color:#fde047;text-shadow:0 0 10px rgba(250,204,21,0.75);">🏆 GRAND CHAMPION</div>'
+    +   '<div style="font-size:32px;font-weight:900;color:'+champCol+';text-shadow:0 0 18px '+champCol+';font-family:Cinzel,serif;line-height:1.1;">'+champ+'</div>'
+    +   '<div style="font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;">all-time · Ian '+ti+' · Evan '+te+' · week '+tw+'</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:11px;">'+kid('IAN',TEAL,ian,qi,di,wLead==='ian')+kid('EVAN',GOLD,evan,qe,de,wLead==='evan')+'</div>'
+    + '<div>'
+    +   '<div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 14px;">'
+    +     '<span style="font-size:12.5px;font-weight:800;color:#fca5a5;">🧹 '+avail+' jobs · '+pts+' pts up for grabs</span>'
+    +     '<span style="font-size:12.5px;font-weight:800;color:'+(unlocked?'#86efac':'#fbbf24')+';">'+(reqLeft>0?reqLeft+' required left':'optional unlocked ✓')+'</span>'
+    +   '</div>'
+    +   '<div style="text-align:center;margin-top:9px;font-size:11.5px;font-weight:800;letter-spacing:0.5px;color:#7ee7f7;text-shadow:0 0 8px rgba(34,211,238,0.5);">Tap for the job board &amp; queues →</div>'
+    + '</div>'
+    + '</div>';
+]]]"""
+
+CHORES_SUMMARY = {
+    "type": "custom:button-card", "entity": "sensor.chores_points",
+    "show_icon": False, "show_name": False, "show_state": False,
+    "tap_action": {"action": "navigate", "navigation_path": NP + "chores"},
+    "triggers_update": ["sensor.chores_points"],
+    "custom_fields": {"m": CHORES_SUMMARY_JS},
+    "styles": {
+        "card": [{"height": "calc((100vh - 84px) * 0.62)"}, {"margin": "5px"},
+                 {"border-radius": "24px"},
+                 {"background": "linear-gradient(160deg, rgba(30,12,20,0.96), rgba(8,12,28,0.96))"}],
+        "grid": [{"grid-template-areas": '"m"'}, {"grid-template-rows": "1fr"}],
+        "custom_fields": {"m": [{"width": "100%"}, {"height": "100%"}]},
+    },
+    "card_mod": {"style":
+        "ha-card{border:1.5px solid rgba(244,63,94,0.6)!important;"
+        "box-shadow:0 0 22px rgba(244,63,94,0.4),inset 0 0 30px rgba(0,0,0,0.5)!important;}"
+        "#container{height:100%!important;}"},
+}
+
+_SMALL_H = "calc((100vh - 84px) * 0.34)"
 
 HOME_VIEW = {
     "title": "Home", "path": "home", "icon": "mdi:cellphone",
     "theme": "YOUR_THEME", "type": "panel", "background": dict(BG),
     "cards": [{"type": "vertical-stack", "cards": [
+        CHORES_SUMMARY,
         {"type": "horizontal-stack", "cards": [
-            big_tile("Remotes", "mdi:remote", "remotes", "#c4b5fd", "rgba(168,85,247,0.55)"),
-            big_tile("Chores", "mdi:broom", "chores", "#fb7185", "rgba(244,63,94,0.55)"),
-        ]},
-        {"type": "horizontal-stack", "cards": [
-            big_tile("Say It", "mdi:microphone", "say-it", "#22d3ee", "rgba(34,211,238,0.55)"),
-            big_tile("Schedule", "mdi:calendar-month", "schedule", "#22c55e", "rgba(34,197,94,0.55)"),
+            tile("Remotes", "mdi:remote", "remotes", "#c4b5fd", "rgba(168,85,247,0.55)", _SMALL_H),
+            tile("Say It", "mdi:microphone", "say-it", "#22d3ee", "rgba(34,211,238,0.55)", _SMALL_H),
+            tile("Schedule", "mdi:calendar-month", "schedule", "#22c55e", "rgba(34,197,94,0.55)", _SMALL_H),
         ]},
     ]}],
 }
