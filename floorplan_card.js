@@ -28,13 +28,13 @@ const ROOM_LIGHTS = {
 // Placement is a best guess from device names — tell me any that sit wrong.
 const ROOM_MEDIA = {
   "Family Room": ["media_player.family_room_tv", "media_player.family_room_speaker",
-                  "media_player.denon_avr_x2700h_2", "media_player.playstation_5"],
+                  "media_player.denon_avr_x2700h_2"],
   "Kitchen": ["media_player.kitchen_max", "media_player.kitchen_display",
               "media_player.2025_kitchen_house"],
   "Office": ["media_player.office_google_home"],
-  "Screened in Porch": ["media_player.travel_google_tv_2", "media_player.insignia_7303x_ffff"],
+  "Screened in Porch": ["media_player.travel_google_tv", "media_player.insignia_7303x_ffff"],
   "Evan's Room": ["media_player.evan_s_room_tv", "media_player.evan_s_google_home"],
-  "Ian's Room": ["media_player.ian_s_google_home"],
+  "Ian's Room": ["media_player.ian_s_google_home", "media_player.playstation_5"],
   "Master Bedroom": ["media_player.bedroom_google_home"],
   "Gym": ["media_player.fitness_room_speaker", "media_player.workout_room_tv_google_tv"],
   "Rec Room": ["media_player.basement_google_tv", "media_player.basement_speaker",
