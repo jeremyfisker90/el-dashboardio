@@ -462,7 +462,20 @@ for v in cfg["views"]:
     v["type"] = "panel"
     # this injection runs after the back-button walk, so pin directly
     v["cards"] = [{"type": "vertical-stack", "cards": [
-        {"type": "custom:neon-floorplan-card"},
+        {"type": "custom:neon-floorplan-card", "mode": "lighting"},
+        pinned({}),
+    ]}]
+
+# ------------------------------------------------ entertainment view: media house
+# Same floorplan card, entertainment mode: TVs/speakers per room, tap to toggle,
+# tap a room for a media panel (on/off, play-pause, volume).
+for v in cfg["views"]:
+    if v.get("path") != "entertainment":
+        continue
+    v.pop("sections", None)
+    v["type"] = "panel"
+    v["cards"] = [{"type": "vertical-stack", "cards": [
+        {"type": "custom:neon-floorplan-card", "mode": "entertainment"},
         pinned({}),
     ]}]
 

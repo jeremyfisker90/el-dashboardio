@@ -24,6 +24,29 @@ const ROOM_LIGHTS = {
   "Evan's Room": ["light.orange_dog"],
   "Master Bedroom": ["light.bedroom_lamp_1", "light.bedroom_lamp_2"],
 };
+// Entertainment mode: media devices per room (same room names as the layout).
+// Placement is a best guess from device names — tell me any that sit wrong.
+const ROOM_MEDIA = {
+  "Family Room": ["media_player.family_room_tv", "media_player.family_room_speaker",
+                  "media_player.denon_avr_x2700h_2", "media_player.playstation_5"],
+  "Kitchen": ["media_player.kitchen_max", "media_player.kitchen_display",
+              "media_player.2025_kitchen_house"],
+  "Office": ["media_player.office_google_home"],
+  "Screened in Porch": ["media_player.travel_google_tv_2", "media_player.insignia_7303x_ffff"],
+  "Evan's Room": ["media_player.evan_s_room_tv", "media_player.evan_s_google_home"],
+  "Ian's Room": ["media_player.ian_s_google_home"],
+  "Master Bedroom": ["media_player.bedroom_google_home"],
+  "Gym": ["media_player.fitness_room_speaker", "media_player.workout_room_tv_google_tv"],
+  "Rec Room": ["media_player.basement_google_tv", "media_player.basement_speaker",
+               "media_player.denon_avr_x2300w"],
+  "Basement": ["media_player.basement_google_tv", "media_player.basement_speaker"],
+};
+
+// A "device" is on when lit / playing. Media has a couple of live-ish states.
+const MEDIA_ON = ["playing", "paused", "on", "buffering", "idle"];
+
+function isTv(e) { return /tv|google_?tv|roku|playstation|_avr|denon|insignia/i.test(e); }
+
 const THERMO = { room: "Dining Room", floor: "floor1", entity: "climate.nest_thermostat" };
 
 function iso(x, y, z) { return [(x - y) * 0.866 * S, (x + y) * 0.5 * S - (z || 0)]; }
@@ -42,11 +65,20 @@ class NeonFloorplanCard extends HTMLElement {
   setConfig(config) {
     this._config = config || {};
     this._floor = this._config.floor || "floor1";
+    this._mode = this._config.mode === "entertainment" ? "entertainment" : "lighting";
+    this._map = this._mode === "entertainment" ? ROOM_MEDIA : ROOM_LIGHTS;
+    this._accent = this._mode === "entertainment" ? "#38bdf8" : "#fbbf24";   // sky vs amber
     this._layout = null;
     this._lastSig = "";
     this._fetchLayout();
   }
   getCardSize() { return 12; }
+
+  _isOn(e) {
+    const s = this._hass.states[e];
+    if (!s) return false;
+    return this._mode === "entertainment" ? MEDIA_ON.includes(s.state) : s.state === "on";
+  }
 
   async _fetchLayout() {
     try {
@@ -62,17 +94,17 @@ class NeonFloorplanCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     if (this._panelRoom) this._paintPanel();     // keep an open panel live
-    const sig = Object.values(ROOM_LIGHTS).flat()
-      .map(e => e + ":" + (hass.states[e] ? hass.states[e].state : "x")).join("|")
-      + "|" + (hass.states[THERMO.entity] ? JSON.stringify(hass.states[THERMO.entity].attributes.current_temperature) + (hass.states[THERMO.entity].attributes.hvac_action || "") : "")
-      + "|" + this._floor;
+    let sig = Object.values(this._map).flat()
+      .map(e => e + ":" + (hass.states[e] ? hass.states[e].state : "x")).join("|") + "|" + this._floor;
+    if (this._mode === "lighting")
+      sig += "|" + (hass.states[THERMO.entity] ? JSON.stringify(hass.states[THERMO.entity].attributes.current_temperature) + (hass.states[THERMO.entity].attributes.hvac_action || "") : "");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
     this._render();
   }
 
-  _roomLights(name) {
-    return (ROOM_LIGHTS[name] || []).filter(e => this._hass.states[e]);
+  _roomLights(name) {                             // "items in this room", both modes
+    return (this._map[name] || []).filter(e => this._hass.states[e]);
   }
 
   _render() {
@@ -92,11 +124,25 @@ class NeonFloorplanCard extends HTMLElement {
     const minx = Math.min(...px.map(p => p[0])) - PAD, maxx = Math.max(...px.map(p => p[0])) + PAD;
     const miny = Math.min(...px.map(p => p[1])) - PAD - 14, maxy = Math.max(...px.map(p => p[1])) + PAD;
 
+    const ENT = this._mode === "entertainment";
+    // warm amber for lights, cool sky for media
+    const POOL = ENT ? "url(#nfpoolC)" : "url(#nfpool)";
+    const ACC = this._accent;
+    const ACC_SOFT = ENT ? "rgba(56,189,248,0.65)" : "rgba(251,191,36,0.65)";
+
     let defs = '<defs>'
       + '<filter id="nfglow" x="-40%" y="-40%" width="180%" height="180%">'
       + '<feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
       + '<radialGradient id="nfpool"><stop offset="0%" stop-color="rgba(255,190,90,0.55)"/>'
       + '<stop offset="55%" stop-color="rgba(255,170,60,0.22)"/><stop offset="100%" stop-color="rgba(255,170,60,0)"/></radialGradient>'
+      + '<radialGradient id="nfpoolC"><stop offset="0%" stop-color="rgba(56,189,248,0.5)"/>'
+      + '<stop offset="55%" stop-color="rgba(56,189,248,0.2)"/><stop offset="100%" stop-color="rgba(56,189,248,0)"/></radialGradient>'
+      // subtle top-face gradient gives the slabs depth instead of a flat fill
+      + '<linearGradient id="nftop" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="#12203a"/><stop offset="100%" stop-color="#0a1424"/></linearGradient>'
+      + '<linearGradient id="nftopOn" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="' + (ENT ? "#152a44" : "#241d33") + '"/>'
+      + '<stop offset="100%" stop-color="' + (ENT ? "#0d1a2e" : "#161428") + '"/></linearGradient>'
       + '</defs>';
 
     let body = "";
@@ -104,25 +150,25 @@ class NeonFloorplanCard extends HTMLElement {
     const lit = {};
     for (const r of rooms) {
       const ents = this._roomLights(r.name);
-      lit[r.name] = ents.filter(e => this._hass.states[e].state === "on");
+      lit[r.name] = ents.filter(e => this._isOn(e));
     }
 
     // room slabs
     for (const r of sorted) {
       const hasL = this._roomLights(r.name).length > 0;
       const isLit = (lit[r.name] || []).length > 0;
-      const edge = isLit ? "rgba(251,191,36,0.65)" : "rgba(34,211,238,0.4)";
-      const topFill = isLit ? "#141428" : "#0b1226";
+      const edge = isLit ? ACC_SOFT : "rgba(120,150,200,0.30)";
+      const topFill = isLit ? "url(#nftopOn)" : "url(#nftop)";
       body += '<g class="nfroom" data-room="' + r.name.replace(/"/g, "&quot;") + '" style="cursor:' + (hasL ? "pointer" : "default") + '">'
         + prism(r.x + GAP, r.y + GAP, r.x + r.w - GAP, r.y + r.d - GAP, -THICK, 0,
-                topFill, "#060b18", "#091020", edge, 0.9)
+                topFill, "#05090f", "#0a1120", edge, isLit ? 1.1 : 0.8)
         + "</g>";
       // warm pool for lit rooms, painted right after the slab so furniture sits above
       if (isLit) {
         const c = iso(r.x + r.w / 2, r.y + r.d / 2, 0);
         const rx = Math.max(r.w, 5) * 0.62 * S, ry = rx * 0.5;
         body += '<ellipse cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" rx="' + rx.toFixed(0)
-          + '" ry="' + ry.toFixed(0) + '" fill="url(#nfpool)" pointer-events="none"/>';
+          + '" ry="' + ry.toFixed(0) + '" fill="' + POOL + '" pointer-events="none"/>';
       }
     }
 
@@ -142,49 +188,75 @@ class NeonFloorplanCard extends HTMLElement {
     for (const r of rooms) {
       const ents = this._roomLights(r.name);
       const on = (lit[r.name] || []).length;
-      const lp = iso(r.x + r.w / 2, r.y + r.d * 0.17, 6);   // back edge, clear of the bulbs
-      const col = on ? "#fde68a" : "rgba(126,231,247,0.5)";
-      const glow = on ? "filter:drop-shadow(0 0 6px rgba(251,191,36,0.8));" : "";
+      const lp = iso(r.x + r.w / 2, r.y + r.d * 0.17, 6);   // back edge, clear of the devices
+      const col = on ? (ENT ? "#bae6fd" : "#fde68a") : "rgba(148,180,220,0.5)";
+      const glow = on ? "filter:drop-shadow(0 0 6px " + ACC_SOFT + ");" : "";
       r.name.split(" & ").forEach((line, i) => {
         body += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + i * 11).toFixed(1) + '" font-size="'
           + (r.w >= 9 ? 10.5 : 8.5) + '" font-weight="800" letter-spacing="1" text-anchor="middle" '
           + 'fill="' + col + '" style="text-transform:uppercase;' + glow + 'pointer-events:none;" '
           + 'font-family="Segoe UI, Roboto, sans-serif">' + line + "</text>";
       });
-      // one hanging bulb per light, standing in the room and tappable on its own
+      // one tappable device per entity, standing in the room: a hanging bulb in
+      // lighting mode, a floating TV/speaker glyph in entertainment mode.
       ents.forEach((e, i) => {
         const s = this._hass.states[e];
-        const isOn = s.state === "on";
+        const isOn = this._isOn(e);
         const dead = s.state === "unavailable" || s.state === "unknown";
         const u = r.x + (r.w * (i + 1)) / (ents.length + 1);
         const v = r.y + r.d * 0.72;
         const foot = iso(u, v, 0);
         const b = iso(u, v, 26);
-        const short = (s.attributes.friendly_name || e.split(".")[1].replace(/_/g, " "))
-          .replace(new RegExp(r.name, "i"), "").replace(/lights?/i, "").trim() || "light";
+        const litStroke = isOn ? ACC_SOFT : "rgba(96,165,250,0.18)";
+        const nameShort = (s.attributes.friendly_name || e.split(".")[1].replace(/_/g, " "))
+          .replace(new RegExp(r.name, "i"), "").replace(/lights?|google home|home|speaker/i, "").trim();
+        let glyph;
+        if (!ENT) {                                          // ---- light bulb
+          glyph = (isOn ? '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
+                    + '" r="15" fill="' + POOL + '" pointer-events="none"/>' : "")
+            + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="6.2" fill="'
+            + (dead ? "#1e2740" : isOn ? "#fcd34d" : "#243049") + '" stroke="'
+            + (dead ? "rgba(148,163,184,0.35)" : isOn ? "rgba(253,230,138,0.95)" : "rgba(148,180,220,0.5)")
+            + '" stroke-width="1.1" ' + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>';
+        } else if (isTv(e)) {                                // ---- TV screen
+          const w = 15, h = 9;
+          glyph = (isOn ? '<ellipse cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
+                    + '" rx="16" ry="10" fill="' + POOL + '" pointer-events="none"/>' : "")
+            + '<rect x="' + (b[0] - w / 2).toFixed(1) + '" y="' + (b[1] - h / 2).toFixed(1)
+            + '" width="' + w + '" height="' + h + '" rx="1.6" fill="'
+            + (dead ? "#141c2c" : isOn ? "#0b3450" : "#182234") + '" stroke="'
+            + (isOn ? "rgba(125,211,252,0.95)" : "rgba(148,180,220,0.5)")
+            + '" stroke-width="1.1" ' + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>'
+            + (isOn ? '<rect x="' + (b[0] - w / 2 + 1.4).toFixed(1) + '" y="' + (b[1] - h / 2 + 1.4).toFixed(1)
+                    + '" width="' + (w - 2.8) + '" height="' + (h - 2.8) + '" rx="0.8" fill="rgba(56,189,248,0.55)" pointer-events="none"/>' : "");
+        } else {                                             // ---- speaker
+          glyph = (isOn ? '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
+                    + '" r="14" fill="' + POOL + '" pointer-events="none"/>' : "")
+            + '<rect x="' + (b[0] - 5).toFixed(1) + '" y="' + (b[1] - 7).toFixed(1)
+            + '" width="10" height="14" rx="2.4" fill="'
+            + (dead ? "#141c2c" : isOn ? "#0b3450" : "#182234") + '" stroke="'
+            + (isOn ? "rgba(125,211,252,0.95)" : "rgba(148,180,220,0.5)")
+            + '" stroke-width="1.1" ' + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>'
+            + '<circle cx="' + b[0].toFixed(1) + '" cy="' + (b[1] + 1.5).toFixed(1) + '" r="3" fill="none" stroke="'
+            + (isOn ? "rgba(125,211,252,0.9)" : "rgba(148,180,220,0.45)") + '" stroke-width="1" pointer-events="none"/>';
+        }
+        const label = ENT ? (nameShort || (isTv(e) ? "tv" : "speaker")) : (nameShort || "light");
         body += '<g class="nfbulb" data-e="' + e + '" style="cursor:pointer;">'
           + '<line x1="' + fmt(foot).replace(",", '" y1="') + '" x2="' + fmt(b).replace(",", '" y2="')
-          + '" stroke="' + (isOn ? "rgba(251,191,36,0.35)" : "rgba(96,165,250,0.18)")
-          + '" stroke-width="0.8" pointer-events="none"/>'
-          + (isOn ? '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
-                    + '" r="15" fill="url(#nfpool)" pointer-events="none"/>' : "")
-          + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="6.2" fill="'
-          + (dead ? "#1e2740" : isOn ? "#fcd34d" : "#243049") + '" stroke="'
-          + (dead ? "rgba(148,163,184,0.35)" : isOn ? "rgba(253,230,138,0.95)" : "rgba(126,231,247,0.5)")
-          + '" stroke-width="1.1" ' + (isOn ? 'filter="url(#nfglow)"' : "") + ' pointer-events="none"/>'
-          + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1)
-          + '" r="16" fill="transparent"/>'
-          + '<text x="' + b[0].toFixed(1) + '" y="' + (b[1] + 15).toFixed(1) + '" font-size="6.6" '
+          + '" stroke="' + litStroke + '" stroke-width="0.8" pointer-events="none"/>'
+          + glyph
+          + '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="16" fill="transparent"/>'
+          + '<text x="' + b[0].toFixed(1) + '" y="' + (b[1] + 16).toFixed(1) + '" font-size="6.6" '
           + 'font-weight="800" text-anchor="middle" fill="'
-          + (isOn ? "#fde68a" : "rgba(126,231,247,0.55)") + '" pointer-events="none" '
+          + (isOn ? (ENT ? "#bae6fd" : "#fde68a") : "rgba(148,180,220,0.55)") + '" pointer-events="none" '
           + 'font-family="Segoe UI, Roboto, sans-serif" style="text-transform:uppercase;">'
-          + short.slice(0, 12) + "</text>"
+          + label.slice(0, 12) + "</text>"
           + "</g>";
       });
     }
 
-    // thermostat chip
-    if (this._floor === THERMO.floor && this._hass.states[THERMO.entity]) {
+    // thermostat chip (lighting mode only — keeps the media view uncluttered)
+    if (!ENT && this._floor === THERMO.floor && this._hass.states[THERMO.entity]) {
       const tr = rooms.find(r => r.name === THERMO.room);
       if (tr) {
         const st = this._hass.states[THERMO.entity];
@@ -211,10 +283,12 @@ class NeonFloorplanCard extends HTMLElement {
       + '.nftab{border:1px solid rgba(34,211,238,.4);background:rgba(13,20,44,.7);color:#9fb2d0;'
       + 'border-radius:11px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}'
       + '.nftab.on{background:rgba(34,211,238,.18);color:#7ee7f7;box-shadow:0 0 10px rgba(34,211,238,.3);}'
-      + '.nfsum{margin-left:auto;font-size:12px;font-weight:800;color:' + (onCount ? "#fde68a" : "#64748b") + ';'
-      + (onCount ? "text-shadow:0 0 8px rgba(251,191,36,.6);" : "") + '}'
+      + '.nfsum{margin-left:auto;font-size:12px;font-weight:800;color:' + (onCount ? (ENT ? "#bae6fd" : "#fde68a") : "#64748b") + ';'
+      + (onCount ? "text-shadow:0 0 8px " + ACC_SOFT + ";" : "") + '}'
       + '</style>'
-      + '<div class="nfbar">' + tabs + '<span class="nfsum">' + (onCount ? "💡 " + onCount + " light" + (onCount === 1 ? "" : "s") + " on" : "all lights off") + "</span></div>"
+      + '<div class="nfbar">' + tabs + '<span class="nfsum">'
+      + (onCount ? (ENT ? "🔊 " + onCount + " playing" : "💡 " + onCount + " light" + (onCount === 1 ? "" : "s") + " on")
+                 : (ENT ? "nothing playing" : "all lights off")) + "</span></div>"
       + '<svg viewBox="0 0 ' + (maxx - minx).toFixed(0) + " " + (maxy - miny).toFixed(0)
       + '" style="width:100%;height:calc(100vh - 118px);display:block;" xmlns="http://www.w3.org/2000/svg">'
       + defs + '<g transform="translate(' + (-minx).toFixed(1) + "," + (-miny).toFixed(1) + ')">' + body + "</g></svg>"
@@ -245,7 +319,7 @@ class NeonFloorplanCard extends HTMLElement {
     back.className = "nfpanel-back";
     back.innerHTML =
       '<style>' + NeonFloorplanCard.PANEL_CSS + '</style>' +
-      '<div class="nfpanel">' +
+      '<div class="nfpanel' + (this._mode === "entertainment" ? " ent" : "") + '">' +
         '<div class="nfphead"><span class="nfptitle"></span>' +
           '<button class="nfpx" title="Close">&times;</button></div>' +
         '<div class="nfpall">' +
@@ -278,57 +352,78 @@ class NeonFloorplanCard extends HTMLElement {
 
   _paintPanel() {
     if (!this._panel || !this._hass) return;
+    const ENT = this._mode === "entertainment";
     const room = this._panelRoom;
     const ents = this._roomLights(room);
-    const on = ents.filter(e => this._hass.states[e].state === "on").length;
+    const on = ents.filter(e => this._isOn(e)).length;
     this._panel.querySelector(".nfptitle").textContent =
-      room.toUpperCase() + " · " + (on ? on + " of " + ents.length + " on" : "all off");
+      room.toUpperCase() + " · " + (on ? on + " of " + ents.length + (ENT ? " on" : " on") : (ENT ? "all off" : "all off"));
     const rows = this._panel.querySelector(".nfprows");
     const html = ents.map(e => {
       const s = this._hass.states[e];
-      const lit = s.state === "on";
+      const lit = this._isOn(e);
       const name = (s.attributes.friendly_name || e.split(".")[1].replace(/_/g, " "))
         .replace(new RegExp("^" + room + "\\s*", "i"), "");
-      const dim = e.startsWith("light.") && s.attributes.brightness != null;
-      const pct = dim ? Math.round(s.attributes.brightness / 2.55) : 0;
+      // lighting -> brightness slider; entertainment -> volume slider
+      const hasSlider = ENT
+        ? s.attributes.volume_level != null
+        : (e.startsWith("light.") && s.attributes.brightness != null);
+      const pct = ENT
+        ? (s.attributes.volume_level != null ? Math.round(s.attributes.volume_level * 100) : 0)
+        : (s.attributes.brightness != null ? Math.round(s.attributes.brightness / 2.55) : 0);
+      const playing = ENT && s.state === "playing";
+      const nowPlaying = ENT && lit && (s.attributes.media_title || "")
+        ? '<div class="nfpnp">' + s.attributes.media_title + '</div>' : "";
       return '<div class="nfprow' + (lit ? " lit" : "") + '" data-e="' + e + '">' +
         '<div class="nfptop">' +
           '<span class="nfpdot"></span>' +
           '<span class="nfpname">' + name + '</span>' +
+          (ENT ? '<button class="nfppp" data-pp="' + e + '">' + (playing ? "⏸" : "▶") + '</button>' : "") +
           '<button class="nfptog' + (lit ? " lit" : "") + '" data-t="' + e + '">' +
             (lit ? "ON" : "OFF") + '</button>' +
         '</div>' +
-        (dim ? '<div class="nfpdim"><input type="range" min="1" max="100" value="' + pct +
+        nowPlaying +
+        (hasSlider ? '<div class="nfpdim"><span class="nfpicn">' + (ENT ? "🔊" : "☀") + '</span>' +
+               '<input type="range" min="' + (ENT ? 0 : 1) + '" max="100" value="' + pct +
                '" data-b="' + e + '"><span class="nfppct">' + pct + '%</span></div>' : "") +
         '</div>';
     }).join("");
     // only rebuild when the shape changed, so a slider drag isn't yanked away
-    if (rows.dataset.sig !== html.replace(/value="\d+"/g, "")) {
+    if (rows.dataset.sig !== html.replace(/value="\d+"|nfpnp">[^<]*/g, "")) {
       rows.innerHTML = html;
-      rows.dataset.sig = html.replace(/value="\d+"/g, "");
+      rows.dataset.sig = html.replace(/value="\d+"|nfpnp">[^<]*/g, "");
       rows.querySelectorAll("[data-t]").forEach(b =>
         b.addEventListener("pointerup", ev => {
           ev.stopPropagation();
           this._hass.callService("homeassistant", "toggle", { entity_id: b.dataset.t });
         }));
+      rows.querySelectorAll("[data-pp]").forEach(b =>
+        b.addEventListener("pointerup", ev => {
+          ev.stopPropagation();
+          this._hass.callService("media_player", "media_play_pause", { entity_id: b.dataset.pp });
+        }));
       rows.querySelectorAll("[data-b]").forEach(sl => {
         sl.addEventListener("input", () =>
           sl.parentElement.querySelector(".nfppct").textContent = sl.value + "%");
-        sl.addEventListener("change", () =>
-          this._hass.callService("light", "turn_on",
-            { entity_id: sl.dataset.b, brightness_pct: Number(sl.value) }));
+        sl.addEventListener("change", () => ENT
+          ? this._hass.callService("media_player", "volume_set",
+              { entity_id: sl.dataset.b, volume_level: Number(sl.value) / 100 })
+          : this._hass.callService("light", "turn_on",
+              { entity_id: sl.dataset.b, brightness_pct: Number(sl.value) }));
       });
     } else {
       rows.querySelectorAll("[data-b]").forEach(sl => {
         if (document.activeElement !== sl) {
           const s = this._hass.states[sl.dataset.b];
-          const pct = s.attributes.brightness != null ? Math.round(s.attributes.brightness / 2.55) : 0;
+          const pct = ENT
+            ? (s.attributes.volume_level != null ? Math.round(s.attributes.volume_level * 100) : 0)
+            : (s.attributes.brightness != null ? Math.round(s.attributes.brightness / 2.55) : 0);
           sl.value = pct;
           sl.parentElement.querySelector(".nfppct").textContent = pct + "%";
         }
       });
       rows.querySelectorAll(".nfprow").forEach(r => {
-        const lit = this._hass.states[r.dataset.e].state === "on";
+        const lit = this._isOn(r.dataset.e);
         r.classList.toggle("lit", lit);
         const b = r.querySelector(".nfptog");
         b.classList.toggle("lit", lit);
@@ -366,9 +461,23 @@ NeonFloorplanCard.PANEL_CSS = [
   "color:#94a3b8;font-family:inherit;flex:none;}",
   ".nfptog.lit{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.75);color:#fde68a;",
   "box-shadow:0 0 12px rgba(251,191,36,.3);}",
-  ".nfpdim{display:flex;align-items:center;gap:10px;margin:9px 2px 1px;}",
+  ".nfpdim{display:flex;align-items:center;gap:8px;margin:9px 2px 1px;}",
+  ".nfpicn{font-size:13px;opacity:.8;flex:none;}",
   ".nfpdim input{flex:1;accent-color:#fbbf24;height:22px;}",
   ".nfppct{width:42px;text-align:right;font-size:12px;font-weight:800;color:#fde68a;}",
+  ".nfppp{width:38px;padding:7px 0;border-radius:20px;font-size:13px;font-weight:900;cursor:pointer;",
+  "background:rgba(2,6,23,.8);border:1px solid rgba(56,189,248,.5);color:#7dd3fc;font-family:inherit;flex:none;}",
+  ".nfpnp{font-size:12px;color:#7dd3fc;margin:2px 2px 0;white-space:nowrap;overflow:hidden;",
+  "text-overflow:ellipsis;opacity:.85;}",
+  // entertainment palette: swap the amber accents to sky where it reads as media
+  ".nfpanel.ent{border-color:rgba(56,189,248,.45);box-shadow:0 0 40px rgba(56,189,248,.18),0 18px 50px rgba(0,0,0,.7);}",
+  ".nfpanel.ent .nfptitle{color:#bae6fd;text-shadow:0 0 10px rgba(56,189,248,.5);}",
+  ".nfpanel.ent .nfprow.lit{border-color:rgba(56,189,248,.5);box-shadow:0 0 14px rgba(56,189,248,.16);}",
+  ".nfpanel.ent .nfprow.lit .nfpdot{background:#38bdf8;box-shadow:0 0 10px rgba(56,189,248,.9);}",
+  ".nfpanel.ent .nfptog.lit{background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.75);color:#bae6fd;box-shadow:0 0 12px rgba(56,189,248,.3);}",
+  ".nfpanel.ent .nfpdim input{accent-color:#38bdf8;}",
+  ".nfpanel.ent .nfppct{color:#bae6fd;}",
+  ".nfpanel.ent .nfpbtn.on{border-color:rgba(56,189,248,.6);color:#bae6fd;}",
 ].join("");
 
 /* furniture dimensions — mirror of the editor's catalog */
