@@ -483,16 +483,62 @@ for v in cfg["views"]:
 # "Remotes" menu tile -> a picker of the TVs; tap one -> a subview with that
 # TV's graphical Firemote remote. (Firemote card is a HACS resource.)
 REMOTES = [
-    # slug, label, entity, device_family, device_type, icon
-    ("travel", "Travel Google TV", "remote.travel_google_tv", "chromecast", "chromecast-4k", "mdi:television"),
-    ("familyroom", "Family Room TV", "remote.family_room_tv", "chromecast", "chromecast-4k", "mdi:television"),
-    ("basement", "Basement Google TV", "remote.basement_google_tv", "chromecast", "chromecast-4k", "mdi:television"),
-    ("evan", "Evan's Room TV", "remote.evan_s_room_tv", "chromecast", "chromecast-4k", "mdi:television"),
-    ("backporch", "Back Porch (Roku)", "media_player.insignia_7303x_ffff", "roku", "roku-generic-tcl", "mdi:television-classic"),
-    # Fire TVs (ADB) — Firemote's native case, buttons work fully. Rename/model via user.
-    ("masterbed", "Master Bedroom FireTV", "media_player.fire_tv_192_168_1_140", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire"),
-    ("guestoffice", "Guest Room / Office FireTV", "media_player.fire_tv_192_168_1_130", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire"),
+    # slug, label, entity, device_family, device_type, icon, kind
+    # kind "firemote" = graphical Firemote (needs ADB or Roku).
+    # kind "atv"      = button D-pad driven by the Android TV Remote (no ADB).
+    ("screenedporch", "Screened Porch", "remote.travel_google_tv", "", "", "mdi:television", "atv"),
+    ("familyroom", "Family Room TV", "media_player.android_tv_192_168_1_58", "chromecast", "chromecast-4k", "mdi:television", "firemote"),
+    ("basement", "Basement Google TV", "remote.basement_google_tv", "", "", "mdi:television", "atv"),
+    ("evan", "Evan's Room TV", "remote.evan_s_room_tv", "", "", "mdi:television", "atv"),
+    ("backporch", "Back Porch (Roku)", "media_player.insignia_7303x_ffff", "roku", "roku-generic-tcl", "mdi:television-classic", "firemote"),
+    ("masterbed", "Master Bedroom FireTV", "media_player.fire_tv_192_168_1_140", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire", "firemote"),
+    ("guestoffice", "Guest Room / Office FireTV", "media_player.fire_tv_192_168_1_130", "amazon-fire", "fire_tv_stick_4k_max", "mdi:fire", "firemote"),
 ]
+
+
+def _rbtn(entity, cmd, icon, color="#c4b5fd", name=None):
+    """One Android TV Remote button (fires remote.send_command)."""
+    b = {"type": "custom:button-card", "show_icon": not name, "show_name": bool(name),
+         "icon": icon,
+         "tap_action": {"action": "call-service", "service": "remote.send_command",
+                        "service_data": {"entity_id": entity, "command": cmd}},
+         "styles": {"card": [{"height": "58px"}, {"border-radius": "16px"}, {"margin": "4px"},
+                             {"background-color": "rgba(13,20,44,0.92)"},
+                             {"border": "1px solid rgba(168,85,247,0.4)"},
+                             {"box-shadow": "0 0 10px rgba(168,85,247,0.18)"}],
+                    "icon": [{"--mdc-icon-size": "27px"}, {"color": color}],
+                    "name": [{"font-size": "16px"}, {"font-weight": "900"}, {"color": color}]}}
+    if name:
+        b["name"] = name
+    return b
+
+
+_BLANK = {"type": "custom:button-card", "tap_action": {"action": "none"},
+          "styles": {"card": [{"background": "transparent"}, {"box-shadow": "none"},
+                              {"border": "none"}, {"height": "58px"}, {"margin": "4px"}]}}
+
+
+def atv_remote(entity):
+    """A neon D-pad remote for an Android TV Remote entity (no ADB needed)."""
+    hs = lambda cards: {"type": "horizontal-stack", "cards": cards}
+    stack = {"type": "vertical-stack", "cards": [
+        hs([dict(_BLANK), _rbtn(entity, "POWER", "mdi:power", "#fb7185"), dict(_BLANK)]),
+        hs([_rbtn(entity, "BACK", "mdi:keyboard-return"),
+            _rbtn(entity, "HOME", "mdi:home"),
+            _rbtn(entity, "VOLUME_MUTE", "mdi:volume-mute")]),
+        hs([dict(_BLANK), _rbtn(entity, "DPAD_UP", "mdi:chevron-up"), dict(_BLANK)]),
+        hs([_rbtn(entity, "DPAD_LEFT", "mdi:chevron-left"),
+            _rbtn(entity, "DPAD_CENTER", "mdi:circle-outline", "#fde047", "OK"),
+            _rbtn(entity, "DPAD_RIGHT", "mdi:chevron-right")]),
+        hs([dict(_BLANK), _rbtn(entity, "DPAD_DOWN", "mdi:chevron-down"), dict(_BLANK)]),
+        hs([_rbtn(entity, "VOLUME_DOWN", "mdi:volume-minus"),
+            _rbtn(entity, "MEDIA_PLAY_PAUSE", "mdi:play-pause"),
+            _rbtn(entity, "VOLUME_UP", "mdi:volume-plus")]),
+    ]}
+    return {"type": "custom:vertical-stack-in-card", "cards": [stack],
+            "card_mod": {"style": "ha-card{max-width:330px;margin:0 auto!important;"
+                                  "background:transparent!important;border:none!important;"
+                                  "box-shadow:none!important;}"}}
 
 
 def _remote_btn(slug, label, icon):
@@ -525,21 +571,29 @@ REMOTES_VIEW = {
                              {"text-shadow": "0 0 10px rgba(168,85,247,0.6)"}],
                     "icon": [{"--mdc-icon-size": "26px"}, {"color": "#d8b4fe"}]}},
         {"type": "grid", "columns": 3, "square": False,
-         "cards": [_remote_btn(s, lbl, ic) for s, lbl, _, _, _, ic in REMOTES]},
+         "cards": [_remote_btn(r[0], r[1], r[5]) for r in REMOTES]},
         pinned({}),
     ]}],
 }
 cfg["views"] = [v for v in cfg["views"] if v.get("path") != "remotes"]
 cfg["views"].append(REMOTES_VIEW)
 
-for slug, label, entity, fam, dtype, _ in REMOTES:
+for slug, label, entity, fam, dtype, _icon, kind in REMOTES:
     path = "remote-" + slug
-    fire = {"type": "custom:firemote-card", "entity": entity,
-            "device_family": fam, "device_type": dtype, "compatibility_mode": "default",
-            "card_mod": {"style": "ha-card{background:transparent!important;"
-                                  "border:none!important;box-shadow:none!important;}"}}
-    if entity.startswith("remote."):          # link the Android TV Remote entity
-        fire["android_tv_remote_entity"] = entity
+    if kind == "atv":
+        remote_card = atv_remote(entity)
+    else:
+        fire = {"type": "custom:firemote-card", "entity": entity,
+                "device_family": fam, "device_type": dtype, "compatibility_mode": "default",
+                "card_mod": {"style": "ha-card{background:transparent!important;"
+                                      "border:none!important;box-shadow:none!important;}"}}
+        # link the Android TV Remote companion (speeds up Google TV key sends)
+        ATR = {"familyroom": "remote.family_room_tv"}
+        if slug in ATR:
+            fire["android_tv_remote_entity"] = ATR[slug]
+        elif entity.startswith("remote."):
+            fire["android_tv_remote_entity"] = entity
+        remote_card = fire
     cfg["views"] = [v for v in cfg["views"] if v.get("path") != path]
     cfg["views"].append({
         "title": label, "path": path, "subview": True, "icon": "mdi:remote",
@@ -550,7 +604,7 @@ for slug, label, entity, fam, dtype, _ in REMOTES:
                                  {"border": "none"}, {"padding": "8px 0 2px"}],
                         "name": [{"font-size": "17px"}, {"font-weight": "900"},
                                  {"color": "#d8b4fe"}, {"letter-spacing": "1px"}]}},
-            fire,
+            remote_card,
             {"type": "custom:button-card", "name": "Back to Remotes", "icon": "mdi:arrow-left",
              "tap_action": {"action": "navigate", "navigation_path": "/el-dashboardio/remotes"},
              "styles": {"card": [{"background-color": "rgba(13,20,44,0.9)"},
