@@ -394,23 +394,55 @@ CHAMP_JS = """[[[
   var champNice = champ === 'ian' ? 'Ian' : champ === 'evan' ? 'Evan' : 'Tied';
   var otherName = champ === 'ian' ? 'EVAN' : 'IAN';
   var otherPts = champ === 'ian' ? te : ti;
-  var otherCol = champ === 'ian' ? '#fdba74' : '#5eead4';
-  return '<div style="position:relative;width:100%;height:138px;">'
+  var streak = a ? (a.streak_weeks || 0) : 0;
+  var streakKid = a ? a.streak_kid : null;
+  var flame = (streak > 1 && streakKid === champ)
+    ? '<span style="font-size:12px;filter:drop-shadow(0 0 6px rgba(251,146,60,.9));">\\uD83D\\uDD25 ' + streak + 'w</span>' : '';
+  return '<style>'
+    + '@keyframes champSheen{0%{background-position:200% center}100%{background-position:-200% center}}'
+    + '@keyframes champCrown{0%,100%{transform:translateY(0) scale(1);filter:drop-shadow(0 0 9px rgba(250,204,21,.85))}'
+    +   '50%{transform:translateY(-2px) scale(1.08);filter:drop-shadow(0 0 18px rgba(250,204,21,1))}}'
+    + '.champGold{background:linear-gradient(100deg,#eab308 0%,#fde68a 22%,#fffbe6 38%,#fde047 50%,#fde68a 64%,#eab308 92%);'
+    +   'background-size:220% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;'
+    +   'color:transparent;animation:champSheen 4.5s linear infinite;}'
+    + '</style>'
+    + '<div style="position:relative;width:100%;height:138px;overflow:hidden;border-radius:12px;">'
     + '<img src="/local/goat.jpg?v=1" style="position:absolute;left:0;top:0;width:100%;height:100%;'
-    +   'object-fit:cover;object-position:center 30%;opacity:0.24;border-radius:12px;z-index:0;">'
+    +   'object-fit:cover;object-position:center 30%;opacity:0.26;border-radius:12px;z-index:0;">'
+    // warm gold vignette so the crest glows from the center
+    + '<div style="position:absolute;inset:0;z-index:0;border-radius:12px;'
+    +   'background:radial-gradient(120% 90% at 50% 40%, rgba(250,204,21,0.16), transparent 60%);'
+    +   'box-shadow:inset 0 0 22px rgba(250,204,21,0.22);"></div>'
     + '<div style="position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-between;'
-    + 'align-items:center;width:100%;height:100%;box-sizing:border-box;padding:5px 0 2px;">'
-    + '<div style="font-family:UnifrakturMaguntia,Georgia,serif;font-size:20px;color:#fde047;'
-    +   'white-space:nowrap;text-shadow:0 0 12px rgba(250,204,21,0.8), 0 1px 2px rgba(0,0,0,0.85);'
-    +   'line-height:1;">Grand Champion</div>'
-    + '<div style="display:flex;align-items:center;gap:7px;">'
-    +   '<span style="font-size:27px;line-height:1;filter:drop-shadow(0 0 12px rgba(250,204,21,0.95));">\\uD83D\\uDC51</span>'
-    +   '<span style="font-family:Cinzel,Georgia,serif;font-weight:800;font-size:25px;color:#fde047;line-height:1;'
-    +     'letter-spacing:1px;text-shadow:0 0 14px rgba(250,204,21,0.85), 0 1px 3px rgba(0,0,0,0.85);">' + champNice + ' ' + champPts + '</span>'
+    + 'align-items:center;width:100%;height:100%;box-sizing:border-box;padding:6px 0 3px;">'
+    + '<div class="champGold" style="font-family:UnifrakturMaguntia,Georgia,serif;font-size:24px;'
+    +   'white-space:nowrap;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.95));">Grand Champion</div>'
+    // gilded flourish divider
+    + '<div style="display:flex;align-items:center;gap:5px;width:74%;margin:-1px 0;">'
+    +   '<span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(250,204,21,.85));"></span>'
+    +   '<span style="color:#fde047;font-size:8px;line-height:1;filter:drop-shadow(0 0 4px rgba(250,204,21,.9));">\\u25C6</span>'
+    +   '<span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(250,204,21,.85),transparent);"></span>'
     + '</div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:baseline;width:100%;padding:0 3px;">'
-    +   '<span style="font-size:9px;font-weight:800;color:#cbd5e1;white-space:nowrap;">TOTAL POINTS \\u00b7 WEEK ' + tw + '</span>'
-    +   '<span style="font-size:10.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;'
+    // crown sits BEHIND the name as a backdrop, laurels flank it, name on top
+    + '<div style="position:relative;display:flex;align-items:center;justify-content:center;'
+    +   'width:100%;height:52px;">'
+    +   '<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%) scaleX(-1);'
+    +     'font-size:24px;opacity:.75;z-index:0;filter:drop-shadow(0 0 6px rgba(250,204,21,.7));">\\uD83C\\uDF3F</span>'
+    +   '<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+    +     'font-size:58px;line-height:1;opacity:.6;z-index:0;'
+    +     'animation:champCrown 2.4s ease-in-out infinite;">\\uD83D\\uDC51</span>'
+    +   '<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);'
+    +     'font-size:26px;opacity:.8;z-index:0;filter:drop-shadow(0 0 6px rgba(250,204,21,.7));">\\uD83C\\uDF3F</span>'
+    // solid bright gold — the animated gradient renders too dark on the tablet WebView
+    +   '<span style="position:relative;z-index:1;font-family:Cinzel,Georgia,serif;'
+    +     'font-weight:900;font-size:42px;line-height:1;letter-spacing:1px;color:#ffe14a;'
+    +     'text-shadow:0 2px 8px rgba(0,0,0,1),0 0 10px rgba(250,204,21,.55),0 0 3px rgba(0,0,0,1);">'
+    +     champNice + ' ' + champPts + '</span>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:0 4px;">'
+    +   '<span style="font-size:11px;font-weight:800;color:#f2d98c;white-space:nowrap;letter-spacing:.4px;">WEEK ' + tw + '</span>'
+    +   flame
+    +   '<span style="font-size:12.5px;font-weight:900;color:#fbbad6;white-space:nowrap;'
     +     'text-shadow:0 0 8px rgba(244,114,182,0.7);">\\uD83C\\uDF38 ' + otherName + ' ' + otherPts + '</span>'
     + '</div>'
     + '</div>'
@@ -422,7 +454,7 @@ CHAMP_TILE = {
     "show_icon": False, "show_name": False, "show_state": False,
     "tap_action": nav("chores-view"), "custom_fields": {"m": CHAMP_JS},
     "card_mod": {"style":
-        "@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');"
+        "@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cinzel:wght@700;800;900&display=swap');"
         ":host{flex:0 0 218px !important;max-width:218px !important;}"},
     "styles": {"card": [{"background-color": "rgba(8,12,24,0.9)"},
                         {"background-image": "linear-gradient(135deg, rgba(168,85,247,0.50) 0%, rgba(168,85,247,0.26) 75%, rgba(8,12,24,0.05) 100%)"},
