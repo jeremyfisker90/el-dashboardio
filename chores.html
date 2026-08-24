@@ -204,6 +204,25 @@
   .qmini .qdetail { display:none; margin-top:9px; padding-top:9px; cursor:default;
                     border-top:1px solid rgba(148,163,184,.18); }
   .qmini.open .qdetail { display:block; }
+  /* completed-job cards under each kid's column */
+  .kpanel .ksub { margin:14px 2px 8px; font-size:12.5px; font-weight:900; letter-spacing:.6px;
+                  display:flex; align-items:center; gap:8px; padding-top:11px;
+                  border-top:1px dashed rgba(148,163,184,.22); }
+  .kpanel .ksub.donesub.ian  { color:#5eead4; }
+  .kpanel .ksub.donesub.evan { color:#fcd34d; }
+  .kpanel .kcount { margin-left:auto; font-size:10.5px; font-weight:800; color:#8195b5; letter-spacing:.3px; }
+  .donemini { cursor:default; opacity:1; border-left-width:4px; }
+  .donemini .qname { text-decoration:line-through; text-decoration-color:rgba(255,255,255,.35);
+                     font-weight:800; }
+  .donemini .dchk { font-size:16px; font-weight:900; flex:none; }
+  .donemini .donepill { font-size:10.5px; font-weight:900; letter-spacing:.4px; padding:2px 8px;
+                        border:1px solid; border-radius:9px; flex:none; }
+  .donemini .claim { display:flex; align-items:center; gap:10px; }
+  .donemini .undo { background:none; border:none; color:#8195b5; font-size:13px; cursor:pointer;
+                    text-decoration:underline; padding:4px 2px; }
+  .donemini .rejbtn { background:none; border:1px solid rgba(244,63,94,.5); color:#fca5a5;
+                      border-radius:9px; font-size:12px; font-weight:700; padding:6px 10px; cursor:pointer;
+                      margin-left:auto; }
   .claim .toian  { background:rgba(45,212,191,.16); color:#5eead4; border:1px solid rgba(45,212,191,.6);
                    box-shadow:0 0 10px rgba(45,212,191,.22); }
   .claim .toevan { background:rgba(251,191,36,.16); color:#fcd34d; border:1px solid rgba(251,191,36,.6);
@@ -353,17 +372,35 @@ function render(){
       + detail + '</div>';
   };
 
+  // a finished job, shown under the kid who did it (their colour + a ✓ tag)
+  const doneCard = (c) => {
+    const col = c.done_by === 'ian' ? '#2dd4bf' : '#fbbf24';
+    const nm  = c.done_by === 'ian' ? 'Ian' : 'Evan';
+    return '<div class="chore qmini donemini who-' + c.done_by + '" style="border-color:' + col + '77">'
+      + '<div class="qrow"><span class="dchk" style="color:' + col + '">✓</span>'
+      + '<span class="qname">' + esc(c.name) + '</span>'
+      + '<span class="donepill" style="color:' + col + ';border-color:' + col + '">' + nm + ' ✓</span>'
+      + '<span class="badge">' + c.points + ' pts</span></div>'
+      + '<div class="claim" style="margin-top:7px">'
+      + '<button class="undo" onclick="unclaim(' + c.id + ')">undo</button>'
+      + '<button class="rejbtn" onclick="reject(' + c.id + ')">↩ Reject</button></div>'
+      + '</div>';
+  };
+
   const kidPanel = (k, label) => {
     const val = tot[k] || 0;
     const pct = Math.min(100, Math.round(val / t * 100));
     const msg = val >= t ? '<span class="win">🎯 Target hit!</span>' : (t - val) + ' to go';
     const rej = pend.filter(c => c.rejected && c.rejected.kid === k);   // fixes sit on top
     const q = k === 'ian' ? qIan : qEvan;
+    const doneK = done.filter(c => c.done_by === k);
+    const donePts = doneK.reduce((s, c) => s + (parseInt(c.points) || 0), 0);
     return '<div class="kpanel ' + k + '">'
       + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
       + '<span class="kpts">' + val + ' <small>/ ' + t + '</small></span>'
       + '<span class="qcount">' + (rej.length + q.length) + ' IN QUEUE'
-      + (rej.length ? ' · ' + rej.length + ' TO FIX' : '') + '</span></div>'
+      + (rej.length ? ' · ' + rej.length + ' TO FIX' : '')
+      + (doneK.length ? ' · ' + doneK.length + ' DONE' : '') + '</span></div>'
       + '<div class="kbody">'
       + '<div class="bar"><div style="width:' + pct + '%"></div></div>'
       + '<div class="goal">' + msg + '</div>'
@@ -371,6 +408,11 @@ function render(){
       + q.map(c => queueCard(c, false)).join('')
       + (!rej.length && !q.length
           ? '<div class="empty">Queue is empty — grab a job from the board ⬅</div>' : '')
+      + (doneK.length
+          ? '<div class="ksub donesub ' + k + '">✅ COMPLETED JOBS'
+            + '<span class="kcount">' + doneK.length + ' done · ' + donePts + ' pts</span></div>'
+            + doneK.map(doneCard).join('')
+          : '')
       + '</div></div>';
   };
 
@@ -401,25 +443,12 @@ function render(){
                      : '<div class="empty">No optional chores right now.</div>';
   html += '</div></div>';
 
-  // --- DONE panel: this week's history + what's resting ---
-  if (done.length || later.length){
-    html += '<div class="panel donep"><div class="phead">✅ Done This Week'
-         + '<span class="note">resets Monday</span></div><div class="pbody">';
-    if (done.length){
-      html += grid(done.map(c => {
-        const col = c.done_by==='ian' ? '#2dd4bf' : '#fbbf24';
-        return '<div class="chore done"><div class="top"><div class="cn">'+esc(c.name)+'</div>'
-          + '<div class="badge">'+c.points+' pts</div></div>'
-          + '<div class="doneby" style="color:'+col+'">✓ '+(c.done_by==='ian'?'Ian':'Evan')
-          + '<button class="undo" onclick="unclaim('+c.id+')">undo</button></div>'
-          + '<div style="margin-top:10px;text-align:right">'
-          + '<button class="rejbtn" onclick="reject('+c.id+')">↩ Rejected by parent</button></div>'
-          + '</div>';
-      }));
-    } else {
-      html += '<div class="empty">Nothing finished yet this week.</div>';
-    }
-    if (later.length){
+  // --- RESTING panel: chores not due until later.
+  // (Completed jobs now live under each kid's column on the right.)
+  if (later.length){
+    html += '<div class="panel donep"><div class="phead">🗓 On the Rotation'
+         + '<span class="note">not due yet</span></div><div class="pbody">';
+    {
       html += '<div class="sub" style="color:#8195b5">NOT DUE YET — ' + later.length + ' on the rotation</div>';
       html += grid(later.map(c => {
         const d = c.next_due ? new Date(c.next_due + 'T00:00:00') : null;
