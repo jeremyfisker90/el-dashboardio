@@ -1,0 +1,205 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Cozi Schedule</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    background: transparent; color: #eaf0fa;
+    -webkit-font-smoothing: antialiased;
+  }
+  #wrap { height: 100vh; display: flex; flex-direction: column; padding: 10px 10px 6px; }
+  .hdr {
+    display: flex; align-items: center; gap: 8px; padding: 4px 6px 10px;
+  }
+  .hdr .t {
+    font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #86efac;
+    text-shadow: 0 0 12px rgba(34,197,94,0.55);
+  }
+  .hdr .live {
+    margin-left: auto; font-size: 11px; font-weight: 700; color: #7ea3c9;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+         box-shadow: 0 0 8px #22c55e; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  #list { flex: 1; overflow-y: auto; overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch; padding-right: 2px; }
+  #list::-webkit-scrollbar { width: 6px; }
+  #list::-webkit-scrollbar-thumb { background: rgba(34,197,94,.5); border-radius: 3px; }
+  .day { margin: 0 0 4px; }
+  .dayhd {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: baseline; gap: 8px; padding: 9px 6px 6px;
+    background: linear-gradient(180deg, rgba(8,12,28,0.97), rgba(8,12,28,0.86));
+    backdrop-filter: blur(2px);
+  }
+  .dayhd .dow { font-size: 15px; font-weight: 900; letter-spacing: .5px; color: #eaf0fa; }
+  .dayhd .dt  { font-size: 12px; font-weight: 700; color: #7ea3c9; }
+  .dayhd.today .dow { color: #86efac; text-shadow: 0 0 10px rgba(34,197,94,.6); }
+  .dayhd.today .badge { font-size: 10px; font-weight: 900; letter-spacing: 1px;
+    color: #052e16; background: #4ade80; border-radius: 8px; padding: 2px 7px; }
+  .ev {
+    display: flex; gap: 10px; align-items: stretch;
+    background: rgba(13,20,44,0.72); border: 1px solid rgba(255,255,255,0.06);
+    border-left-width: 4px; border-radius: 12px; padding: 9px 11px; margin: 0 0 7px;
+  }
+  .ev .time { min-width: 62px; text-align: right; }
+  .ev .time .s { font-size: 13px; font-weight: 800; }
+  .ev .time .e { font-size: 10.5px; font-weight: 600; color: #7ea3c9; }
+  .ev .allday { font-size: 11px; font-weight: 800; letter-spacing: .5px; }
+  .ev .body { flex: 1; min-width: 0; }
+  .ev .title { font-size: 14.5px; font-weight: 800; color: #f1f5f9; line-height: 1.2;
+    overflow-wrap: anywhere; }
+  .ev .who { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 900;
+    letter-spacing: .5px; padding: 2px 8px; border-radius: 9px; }
+  .empty { text-align: center; color: #6b7a95; font-weight: 700; padding: 40px 12px; }
+  .err { text-align: center; color: #fca5a5; font-weight: 700; padding: 24px 12px; font-size: 13px; }
+</style>
+<div id="wrap">
+  <div class="hdr">
+    <span class="t">📅 Cozi Schedule</span>
+    <span class="live"><span class="dot"></span><span id="upd">live</span></span>
+  </div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</div>
+<script>
+// Over https (via the SSL proxy) the add-on is same-origin at /cozi; over http
+// (the usual LAN case for the wall tablet + phones) hit :5000 directly.
+let API = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://' + location.hostname + ':5000';
+const API_FALLBACK = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://YOUR_HA_IP:5000';
+
+// Cozi household member id -> display name + colour (matches the rest of the board)
+const PERSONS = {
+  '26d73760-41ef-496f-b426-adfac51b9f5e': { name: 'Dad',  color: '#a855f7' },
+  '7cd5c3ac-3ae4-4228-94b8-44138996c8f4': { name: 'Mom',  color: '#f472b6' },
+  '4c16b999-cbf5-4bad-8161-068882eabc54': { name: 'Evan', color: '#fbbf24' },
+  'cbd89b84-d68c-4dbe-bfd9-37f9a11f1acf': { name: 'Loki', color: '#94a3b8' },
+  '1a4d1dae-6eae-452d-84d0-509078eca5f8': { name: 'Ian',  color: '#2dd4bf' },
+};
+const FAMILY = { name: 'Family', color: '#22d3ee' };
+
+const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS_AHEAD = 21;
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function getJSON(path){
+  try { const r = await fetch(API + path, {cache:'no-store'});
+        if (!r.ok) throw new Error(r.status); return await r.json(); }
+  catch(e){
+    if (API === API_FALLBACK) throw e;
+    API = API_FALLBACK;
+    const r = await fetch(API + path, {cache:'no-store'});
+    if (!r.ok) throw new Error(r.status); return await r.json();
+  }
+}
+
+function whoOf(ids){
+  const known = (ids || []).map(id => PERSONS[id]).filter(Boolean);
+  if (known.length === 1) return known[0];
+  return FAMILY;                       // nobody, everybody, or a mix -> Family
+}
+
+function fmtTime(t){
+  if (!t) return null;
+  const p = t.split(':'); let h = parseInt(p[0], 10); const m = p[1] || '00';
+  if (isNaN(h)) return null;
+  const ap = h >= 12 ? 'PM' : 'AM'; let hh = h % 12; if (hh === 0) hh = 12;
+  return hh + ':' + m + ' ' + ap;
+}
+
+function monthsToFetch(){
+  const out = []; const d = new Date();
+  for (let i = 0; i < 3; i++){                 // this month + next two (covers the window)
+    out.push({ y: d.getFullYear(), m: d.getMonth() + 1 });
+    d.setMonth(d.getMonth() + 1);
+  }
+  return out;
+}
+
+function isoToday(){ const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+
+async function load(){
+  let events = [];
+  try {
+    const seen = new Set();
+    for (const {y, m} of monthsToFetch()){
+      const data = await getJSON('/cozi/calendar/' + y + '/' + m);
+      const items = (data && data.items) || {};
+      for (const k in items){
+        const it = items[k];
+        if (it.itemType && it.itemType !== 'appointment') continue;
+        const key = (it.id || k) + '|' + it.day;      // dedupe across overlapping month pulls
+        if (seen.has(key)) continue; seen.add(key);
+        if (!it.day) continue;
+        events.push({
+          day: it.day, start: it.startTime || '', end: it.endTime || '',
+          title: it.description || it.descriptionShort || '(no title)',
+          who: whoOf(it.householdMembers),
+        });
+      }
+    }
+  } catch(e){
+    document.getElementById('list').innerHTML =
+      '<div class="err">Could not reach Cozi (' + esc(e.message) + ').<br>Retrying…</div>';
+    return;
+  }
+
+  const today = isoToday();
+  const horizon = new Date(); horizon.setDate(horizon.getDate() + DAYS_AHEAD);
+  const hIso = horizon.getFullYear() + '-' + String(horizon.getMonth()+1).padStart(2,'0') + '-' + String(horizon.getDate()).padStart(2,'0');
+  events = events.filter(e => e.day >= today && e.day <= hIso);
+  events.sort((a,b) => a.day < b.day ? -1 : a.day > b.day ? 1
+                     : (a.start || '99') < (b.start || '99') ? -1 : 1);
+
+  const byDay = {};
+  for (const e of events){ (byDay[e.day] = byDay[e.day] || []).push(e); }
+  const days = Object.keys(byDay).sort();
+
+  let html = '';
+  if (!days.length){
+    html = '<div class="empty">Nothing on the calendar for the next ' + DAYS_AHEAD + ' days.</div>';
+  } else {
+    for (const day of days){
+      const dt = new Date(day + 'T00:00:00');
+      const isToday = day === today;
+      html += '<div class="day"><div class="dayhd' + (isToday ? ' today' : '') + '">'
+        + '<span class="dow">' + DOW[dt.getDay()] + '</span>'
+        + '<span class="dt">' + MON[dt.getMonth()] + ' ' + dt.getDate() + '</span>'
+        + (isToday ? '<span class="badge">TODAY</span>' : '')
+        + '</div>';
+      for (const e of byDay[day]){
+        const st = fmtTime(e.start);
+        const en = fmtTime(e.end);
+        const timeCell = st
+          ? '<div class="s">' + st + '</div>' + (en ? '<div class="e">' + en + '</div>' : '')
+          : '<div class="allday" style="color:' + e.who.color + '">ALL&nbsp;DAY</div>';
+        html += '<div class="ev" style="border-left-color:' + e.who.color + '">'
+          + '<div class="time">' + timeCell + '</div>'
+          + '<div class="body"><div class="title">' + esc(e.title) + '</div>'
+          + '<span class="who" style="color:' + e.who.color + ';background:' + e.who.color + '22">'
+          + e.who.name + '</span></div></div>';
+      }
+      html += '</div>';
+    }
+  }
+  document.getElementById('list').innerHTML = html;
+  const now = new Date();
+  document.getElementById('upd').textContent = 'updated ' +
+    (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2,'0') +
+    (now.getHours() >= 12 ? 'pm' : 'am');
+}
+
+load();
+setInterval(load, 60000);                                  // interim refresh: every 60s
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+</script>

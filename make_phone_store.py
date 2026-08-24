@@ -193,20 +193,10 @@ def iframe_view(title, path, url, icon):
 
 
 # ------------------------------------------------------------------ schedule view
-SCHEDULE_VIEW = {
-    "title": "Schedule", "path": "schedule", "subview": True,
-    "icon": "mdi:calendar-month", "theme": "YOUR_THEME", "type": "panel",
-    "background": dict(BG),
-    "cards": [{"type": "vertical-stack", "cards": [
-        {"type": "calendar", "initial_view": "listWeek", "entities": CALENDARS,
-         "card_mod": {"style":
-             "ha-card{height:calc(100vh - 78px)!important;overflow:auto!important;"
-             "background:rgba(8,12,28,0.9)!important;"
-             "border:1px solid rgba(34,197,94,0.5)!important;border-radius:18px!important;"
-             "box-shadow:0 0 20px rgba(34,197,94,0.25)!important;margin:6px!important;}"}},
-        back_home("#86efac", "rgba(34,197,94,0.55)"),
-    ]}],
-}
+# Live Cozi appointments straight from the add-on (bypasses the Cozi->Google lag);
+# the widget self-refreshes every 60s. iframe, like the chores/say-it pages.
+SCHEDULE_VIEW = iframe_view("Schedule", "schedule",
+                           "/local/cozi_schedule.html?v=%d" % V, "mdi:calendar-month")
 
 # ------------------------------------------------------------------ remotes views
 def _rbtn(entity, cmd, icon, color="#c4b5fd", name=None):
