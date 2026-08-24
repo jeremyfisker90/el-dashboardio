@@ -388,11 +388,16 @@ function render(){
        + '<span class="pill must">DO THESE FIRST</span></div>';
   html += req.length ? grid(req.map(c => choreHtml(c, false)))
                      : '<div class="empty">Every required chore is queued or done. 🎉</div>';
+  const cr = D.optional_credits || {ian:0, evan:0};
+  const ic = Math.max(0, cr.ian||0), ec = Math.max(0, cr.evan||0);
   html += '<div class="sub" style="color:#5fe0c6">OPTIONAL — EXTRA POINTS'
-       + (unlocked ? '<span class="pill open">UNLOCKED</span>'
-                   : '<span class="pill lock">🔒 ' + D.required_left + ' REQUIRED LEFT</span>')
-       + '</div>';
-  html += opt.length ? grid(opt.map(c => choreHtml(c, !unlocked)))
+       + '<span class="pill open">🔓 1 REQUIRED = 1 OPTIONAL</span></div>';
+  html += '<div style="font-size:12.5px;font-weight:700;margin:0 0 8px;color:#9fb3cf">'
+       + 'Unlocked to spend now — '
+       + '<span style="color:#2dd4bf;font-weight:800">Ian ' + ic + '</span> · '
+       + '<span style="color:#fbbf24;font-weight:800">Evan ' + ec + '</span>'
+       + ' <span style="color:#6b7a95">(each finishes a required to unlock one more)</span></div>';
+  html += opt.length ? grid(opt.map(c => choreHtml(c, false)))
                      : '<div class="empty">No optional chores right now.</div>';
   html += '</div></div>';
 
