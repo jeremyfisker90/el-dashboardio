@@ -300,6 +300,12 @@
   .game-card .g-sub { font-size:10.5px; font-weight:700; color:#cbd5e1; }
   .house-note { font-size:12px; line-height:1.4; color:#cbd5e1; margin:6px 8px 14px; }
   .house-note b { color:#fde047; }
+  .rules { margin:12px 4px 14px; padding:12px 14px; border-radius:14px; text-align:left;
+    background:rgba(0,0,0,.35); border:1px solid rgba(255,213,74,.4); }
+  .rules-hd { font-size:13px; font-weight:900; letter-spacing:1.5px; color:#fde047; margin-bottom:6px;
+    text-align:center; text-shadow:0 0 8px rgba(250,204,21,.5); }
+  .rules-body { font-size:12px; line-height:1.7; color:#dbe4f0; }
+  .rules-body b { color:#fde047; }
   .cashout-btn { width:100%; padding:13px; border-radius:14px; font-size:15px; font-weight:900; cursor:pointer;
     color:#fecaca; background:rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.5); }
 
@@ -409,7 +415,16 @@
         <button class="game-card slots" onclick="showGame('slots')"><span class="g-ico">🎰</span><span class="g-name">SLOTS</span><span class="g-sub">match 3 to win</span></button>
         <button class="game-card wheel" onclick="showGame('wheel')"><span class="g-ico">🎡</span><span class="g-name">LUCKY WHEEL</span><span class="g-sub">land on gold</span></button>
       </div>
-      <div class="house-note">🏛️ The house wins <b>3 of every 4</b>. Win = <b>double</b> your <span class="ledchip">P</span>, lose = it's gone.</div>
+      <div class="rules">
+        <div class="rules-hd">📜 HOW TO WIN</div>
+        <div class="rules-body">
+          • Every spin is a <b>1-in-4</b> chance to win.<br>
+          • <b>WIN</b> → your bet <b>doubles</b> (get it back + the same again in <span class="ledchip">P</span>).<br>
+          • <b>LOSE</b> (3 of 4) → your bet is gone.<br>
+          • <b>Slots:</b> match 🍒🍒🍒. &nbsp;<b>Wheel:</b> land on a gold slice.<br>
+          • 🏛️ The house always wins over time — bet what you can spare!
+        </div>
+      </div>
       <button class="cashout-btn" onclick="leaveCasino()">🚪 Cash out &amp; leave</button>
     </div>
 
@@ -812,6 +827,7 @@ function codepadCancel(){ codepadClose(); const r=_cpResolve; _cpResolve=null; i
 const SYMS = ['🍒','🍋','💎','🔔','⭐','7️⃣'];
 const LED = '<span class="ledchip">P</span>';
 let casinoKid = null, casinoBalance = 0, casinoWager = 0, casinoGame = null, demoMode = false;
+let wheelDeg = 0;           // cumulative wheel rotation so every spin turns forward
 const WHEEL_GOLD = [1,5];   // 2 of 8 slices = 25% win, shown on the wheel
 
 function crand(){ return SYMS[Math.floor(Math.random()*SYMS.length)]; }
@@ -879,16 +895,16 @@ function pickChip(v, el, game){ casinoWager=v; document.getElementById(game+'Wag
 function showGame(game){
   casinoGame=game; casinoWager=0;
   const scr=document.getElementById('scr-'+game); scr.classList.remove('win','lose');
-  if(game==='slots'){ setReels(['🍒','🍋','💎']); document.getElementById('slotsMsg').innerHTML='Pick a bet and pull the lever.';
+  if(game==='slots'){ setReels(['🍒','🍋','💎']); document.getElementById('slotsMsg').innerHTML='Match <b>🍒🍒🍒</b> to win! Each spin = a <b>1-in-4</b> shot. Win <b>doubles</b> your bet.';
     const b=document.getElementById('slotsBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN'; }
-  if(game==='wheel'){ buildWheel(); document.getElementById('wheelMsg').innerHTML='Spin — land on a gold slice to double up.';
+  if(game==='wheel'){ buildWheel(); document.getElementById('wheelMsg').innerHTML='Land the pointer on a <b>GOLD</b> slice to win (2 of 8 = <b>1-in-4</b>). Win <b>doubles</b> your bet.';
     const b=document.getElementById('wheelBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN THE WHEEL'; }
   buildChips(game); updateWallet(); showScreen('scr-'+game);
 }
 function buildWheel(){
   const w=document.getElementById('wheel'); const segs=[];
   for(let i=0;i<8;i++){ const c = WHEEL_GOLD.indexOf(i)>=0 ? '#fbbf24' : (i%2?'#5b21b6':'#134e2b'); segs.push(c+' '+(i*45)+'deg '+((i+1)*45)+'deg'); }
-  w.style.transition='none'; w.style.transform='rotate(0deg)';
+  wheelDeg = 0; w.style.transition='none'; w.style.transform='rotate(0deg)';
   w.style.background='conic-gradient('+segs.join(',')+')'; void w.offsetWidth;
 }
 async function play(game){
@@ -911,9 +927,12 @@ async function play(game){
   const win = res.result==='win';
   if(game==='wheel'){
     const idx = win ? WHEEL_GOLD[Math.floor(Math.random()*WHEEL_GOLD.length)] : [0,2,3,4,6,7][Math.floor(Math.random()*6)];
-    const R = 1800 - (idx*45+22.5);
-    const w=document.getElementById('wheel'); w.style.transition='transform 4s cubic-bezier(.17,.67,.28,1)'; w.style.transform='rotate('+R+'deg)';
-    setTimeout(()=>revealResult(game,res,win), 4100);
+    // land segment idx under the top pin; accumulate so each spin turns forward ≥5 turns
+    const target = ((337.5 - idx*45) % 360 + 360) % 360;
+    let add = target - (((wheelDeg % 360) + 360) % 360); if(add < 0) add += 360;
+    wheelDeg += 5*360 + add;
+    const w=document.getElementById('wheel'); w.style.transition='transform 3s cubic-bezier(.12,.72,.22,1)'; w.style.transform='rotate('+wheelDeg+'deg)';
+    setTimeout(()=>revealResult(game,res,win), 3050);
   } else {
     setTimeout(()=>{ if(whirl)clearInterval(whirl); const reels=document.getElementById('reels'); reels.classList.remove('spinning');
       setReels(win?['🍒','🍒','🍒']:landLose()); revealResult(game,res,win); }, 1500);
