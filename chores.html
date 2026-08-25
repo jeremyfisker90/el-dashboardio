@@ -223,53 +223,123 @@
   .donemini .rejbtn { background:none; border:1px solid rgba(244,63,94,.5); color:#fca5a5;
                       border-radius:9px; font-size:12px; font-weight:700; padding:6px 10px; cursor:pointer;
                       margin-left:auto; }
-  /* Chore Casino */
-  .casino-btn { background:linear-gradient(180deg,#7c3aed,#5b21b6); color:#fde68a;
-                border:1px solid #a78bfa; border-radius:10px; font-size:12px; font-weight:900;
-                letter-spacing:.3px; padding:5px 10px; cursor:pointer;
-                box-shadow:0 0 12px rgba(124,58,237,.5); }
-  .casino-btn:active { transform:scale(.96); }
-  .casino-ov { display:none; position:fixed; inset:0; z-index:9999; background:rgba(3,6,18,.86);
-               backdrop-filter:blur(3px); align-items:center; justify-content:center; padding:16px; }
+  /* ===== The Chore Casino ===== */
+  /* Giant flashing marquee entry button */
+  .casino-marquee { position:relative; display:block; width:100%; margin:12px 0 4px; padding:20px 16px;
+    border-radius:18px; cursor:pointer; border:3px solid #ffd54a; overflow:hidden;
+    background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 40%,#9d174d 100%);
+    box-shadow:0 0 26px rgba(255,213,74,.55),0 0 60px rgba(124,58,237,.5),inset 0 0 30px rgba(0,0,0,.45);
+    animation:cmglow 1.6s ease-in-out infinite; }
+  @keyframes cmglow { 0%,100%{box-shadow:0 0 26px rgba(255,213,74,.5),0 0 60px rgba(124,58,237,.45),inset 0 0 30px rgba(0,0,0,.45);}
+                      50%{box-shadow:0 0 40px rgba(255,213,74,.9),0 0 80px rgba(124,58,237,.7),inset 0 0 30px rgba(0,0,0,.45);} }
+  .casino-marquee:active { transform:scale(.99); }
+  .cm-bulbs { position:absolute; left:6px; right:6px; top:5px; height:8px; pointer-events:none;
+    background-image:radial-gradient(circle, #fff 1.6px, #ffd54a 2.6px, transparent 3.4px); background-size:20px 8px;
+    box-shadow:0 calc(100% + 20px) 0 0 transparent; animation:bulbblink .5s steps(2) infinite; }
+  .cm-bulbs::after { content:''; position:absolute; left:0; right:0; bottom:-30px; height:8px;
+    background-image:radial-gradient(circle, #fff 1.6px, #ffd54a 2.6px, transparent 3.4px); background-size:20px 8px; }
+  @keyframes bulbblink { 0%{opacity:1} 50%{opacity:.35} }
+  .cm-inner { position:relative; display:flex; align-items:center; justify-content:center; gap:14px; }
+  .cm-ico { font-size:34px; filter:drop-shadow(0 0 8px rgba(255,213,74,.8)); animation:cmspin 3s linear infinite; }
+  @keyframes cmspin { 0%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} 100%{transform:rotate(-8deg)} }
+  .cm-txt { display:flex; flex-direction:column; align-items:center; }
+  .cm-title { font-size:23px; font-weight:900; letter-spacing:2.5px; color:#fff59d;
+    text-shadow:0 0 14px rgba(255,213,74,.9),0 2px 0 #7c2d12; }
+  .cm-sub { font-size:11.5px; font-weight:800; letter-spacing:1px; color:#fde68a; opacity:.92; }
+
+  /* Club overlay */
+  .casino-ov { display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,4,12,.9);
+    backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:14px; }
   .casino-ov.show { display:flex; }
-  .casino-box { position:relative; width:min(440px,94vw); border-radius:22px; padding:22px 20px 24px;
-                text-align:center; color:#f8fafc;
-                background:radial-gradient(120% 100% at 50% 0%, #3b0764 0%, #1e1035 55%, #0b0a1e 100%);
-                border:2px solid #a78bfa; box-shadow:0 0 40px rgba(124,58,237,.55),inset 0 0 40px rgba(0,0,0,.5); }
-  .casino-x { position:absolute; top:10px; right:12px; background:none; border:none; color:#c4b5fd;
-              font-size:20px; cursor:pointer; }
-  .casino-title { font-size:22px; font-weight:900; letter-spacing:2px; color:#fde047;
-                  text-shadow:0 0 16px rgba(250,204,21,.7); }
-  .casino-who { font-size:15px; font-weight:900; letter-spacing:1px; color:#c4b5fd; margin-top:2px; }
-  .casino-bal { font-size:13px; color:#cbd5e1; margin:2px 0 10px; }
-  .casino-bal b { color:#5eead4; font-size:16px; }
-  .reels { display:flex; gap:10px; justify-content:center; margin:10px 0; }
-  .reels span { width:78px; height:92px; display:flex; align-items:center; justify-content:center;
-                font-size:46px; border-radius:14px; background:#0b1020;
-                border:2px solid rgba(167,139,250,.5); box-shadow:inset 0 0 18px rgba(0,0,0,.7);
-                overflow:hidden; }
-  .reels.spinning span { animation:reelblur .12s linear infinite; }
-  @keyframes reelblur { 0%{transform:translateY(-4px)} 50%{transform:translateY(4px)} 100%{transform:translateY(-4px)} }
-  .casino-box.win  .reels span { border-color:#4ade80; box-shadow:0 0 18px rgba(74,222,128,.7),inset 0 0 18px rgba(0,0,0,.6); }
-  .casino-box.lose .reels span { border-color:#f43f5e; }
-  .casino-msg { font-size:12.5px; line-height:1.35; color:#cbd5e1; min-height:34px; margin:2px 6px 8px; }
-  .casino-msg b { color:#fde047; }
-  .casino-box.win  .casino-msg { color:#86efac; font-weight:800; font-size:15px; }
-  .casino-box.lose .casino-msg { color:#fca5a5; font-weight:800; font-size:15px; }
-  .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:6px 0 10px; }
-  .chip { min-width:52px; padding:9px 12px; border-radius:12px; font-size:14px; font-weight:900; cursor:pointer;
-          background:rgba(167,139,250,.14); color:#ddd6fe; border:1px solid rgba(167,139,250,.55); }
-  .chip.on { background:#7c3aed; color:#fff; border-color:#c4b5fd; box-shadow:0 0 12px rgba(124,58,237,.7); }
-  .casino-betrow { font-size:13px; color:#cbd5e1; margin:4px 0 12px; }
-  .casino-betrow b { color:#fde047; font-size:16px; }
-  .casino-pin { width:92px; margin-left:6px; padding:8px; border-radius:10px; text-align:center;
-                font-size:15px; font-weight:800; background:#0b1020; color:#f8fafc;
-                border:1px solid rgba(167,139,250,.6); }
-  .spin-btn { width:100%; padding:15px; border-radius:14px; font-size:19px; font-weight:900; letter-spacing:2px;
-              cursor:pointer; color:#1a0b02; border:none;
-              background:linear-gradient(180deg,#fde047,#f59e0b); box-shadow:0 6px 0 #b45309,0 0 22px rgba(245,158,11,.6); }
-  .spin-btn:active { transform:translateY(3px); box-shadow:0 3px 0 #b45309; }
-  .spin-btn:disabled { filter:grayscale(.6) brightness(.8); cursor:default; }
+  .club { position:relative; width:min(460px,96vw); max-height:96vh; overflow-y:auto; border-radius:22px;
+    padding:26px 20px 22px; text-align:center; color:#f8fafc;
+    background:radial-gradient(130% 90% at 50% 0%, #14532d 0%, #0b3b22 30%, #1a0f2e 70%, #07050f 100%);
+    border:3px solid #ffd54a;
+    box-shadow:0 0 50px rgba(255,213,74,.35),0 0 90px rgba(124,58,237,.35),inset 0 0 60px rgba(0,0,0,.6); }
+  .club::before { content:''; position:absolute; left:8px; right:8px; top:7px; height:8px; pointer-events:none;
+    background-image:radial-gradient(circle,#fff 1.5px,#ffd54a 2.5px,transparent 3.3px); background-size:22px 8px;
+    animation:bulbblink .5s steps(2) infinite; }
+  .club-x { position:absolute; top:12px; right:14px; background:none; border:none; color:#fde68a;
+    font-size:22px; cursor:pointer; z-index:3; }
+  .screen { animation:fadein .25s ease; }
+  @keyframes fadein { from{opacity:0; transform:translateY(6px)} to{opacity:1} }
+
+  .club-sign { font-size:26px; font-weight:900; letter-spacing:2px; color:#fff59d; margin-top:6px;
+    text-shadow:0 0 18px rgba(255,213,74,.9),0 0 40px rgba(255,213,74,.5); }
+  .club-sign.small { font-size:22px; }
+  .club-sign .ico { filter:drop-shadow(0 0 8px rgba(255,213,74,.8)); }
+  .club-tag { font-size:12px; font-weight:800; letter-spacing:4px; color:#86efac; margin:2px 0 14px; }
+  .entry-msg { font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:10px; }
+  .entry-msg.deny { color:#fca5a5; font-weight:900; }
+  .entry-pin { width:190px; padding:14px; border-radius:14px; text-align:center; letter-spacing:12px;
+    font-size:30px; font-weight:900; background:#0b1020; color:#fde047; caret-color:transparent;
+    border:2px solid #ffd54a; box-shadow:inset 0 0 18px rgba(0,0,0,.7); }
+  .club.shake .entry-pin { animation:shake .35s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  .keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:250px; margin:16px auto 4px; }
+  .keypad button { padding:16px 0; border-radius:14px; font-size:22px; font-weight:900; cursor:pointer;
+    background:rgba(255,213,74,.1); color:#fde68a; border:1px solid rgba(255,213,74,.45); }
+  .keypad button:active { background:rgba(255,213,74,.3); }
+  .keypad button.enter { grid-column:span 3; background:linear-gradient(180deg,#fde047,#f59e0b); color:#1a0b02;
+    font-size:18px; letter-spacing:2px; box-shadow:0 5px 0 #b45309; }
+
+  .wallet { font-size:26px; font-weight:900; color:#fde047; margin:10px 0 4px;
+    text-shadow:0 0 14px rgba(250,204,21,.6); }
+  .wallet b { font-size:30px; }
+  .wallet span { font-size:13px; color:#cbd5e1; font-weight:700; }
+  .wallet.mini { font-size:15px; margin:0; } .wallet.mini b { font-size:17px; }
+  .games { display:flex; gap:14px; justify-content:center; margin:16px 0 12px; }
+  .game-card { flex:1; max-width:170px; padding:18px 8px; border-radius:18px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px; color:#fff;
+    border:2px solid rgba(255,255,255,.25); background:rgba(0,0,0,.35); transition:transform .1s; }
+  .game-card:active { transform:scale(.96); }
+  .game-card.slots { border-color:#f472b6; box-shadow:0 0 20px rgba(244,114,182,.4); background:linear-gradient(160deg,rgba(244,114,182,.28),rgba(0,0,0,.4)); }
+  .game-card.wheel { border-color:#22d3ee; box-shadow:0 0 20px rgba(34,211,238,.4); background:linear-gradient(160deg,rgba(34,211,238,.25),rgba(0,0,0,.4)); }
+  .game-card .g-ico { font-size:44px; }
+  .game-card .g-name { font-size:16px; font-weight:900; letter-spacing:1px; }
+  .game-card .g-sub { font-size:10.5px; font-weight:700; color:#cbd5e1; }
+  .house-note { font-size:12px; line-height:1.4; color:#cbd5e1; margin:6px 8px 14px; }
+  .house-note b { color:#fde047; }
+  .cashout-btn { width:100%; padding:13px; border-radius:14px; font-size:15px; font-weight:900; cursor:pointer;
+    color:#fecaca; background:rgba(244,63,94,.14); border:1px solid rgba(244,63,94,.5); }
+
+  .game-hd { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .game-hd .game-title { flex:1; font-size:17px; font-weight:900; letter-spacing:1px; color:#fff59d; }
+  .back-lobby { background:none; border:1px solid rgba(255,213,74,.4); color:#fde68a; border-radius:10px;
+    padding:5px 10px; font-size:13px; font-weight:800; cursor:pointer; }
+  .reels { display:flex; gap:10px; justify-content:center; margin:14px 0; }
+  .reels span { width:80px; height:96px; display:flex; align-items:center; justify-content:center;
+    font-size:48px; border-radius:14px; background:#0b1020;
+    border:2px solid rgba(255,213,74,.5); box-shadow:inset 0 0 18px rgba(0,0,0,.7); }
+  .reels.spinning span { animation:reelblur .1s linear infinite; }
+  @keyframes reelblur { 0%{transform:translateY(-5px)} 50%{transform:translateY(5px)} 100%{transform:translateY(-5px)} }
+  .game-screen.win  .reels span { border-color:#4ade80; box-shadow:0 0 20px rgba(74,222,128,.8); }
+  .game-screen.lose .reels span { border-color:#f43f5e; }
+  .game-msg { font-size:13px; line-height:1.35; color:#cbd5e1; min-height:34px; margin:4px 6px; }
+  .game-msg b { color:#fde047; }
+  .game-screen.win  .game-msg { color:#86efac; font-weight:900; font-size:16px; }
+  .game-screen.lose .game-msg { color:#fca5a5; font-weight:900; font-size:16px; }
+  .chips { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:8px 0; }
+  .chip { min-width:56px; padding:11px 10px; border-radius:50px; font-size:15px; font-weight:900; cursor:pointer;
+    color:#1a0b02; background:radial-gradient(circle at 50% 35%,#fde68a,#f59e0b); border:3px dashed #fff7d6;
+    box-shadow:0 0 10px rgba(245,158,11,.5); }
+  .chip.on { outline:3px solid #4ade80; box-shadow:0 0 16px rgba(74,222,128,.7); }
+  .betline { font-size:14px; color:#cbd5e1; font-weight:700; margin:6px 0 10px; }
+  .betline b { color:#fde047; font-size:18px; }
+  .lever-btn { width:100%; padding:16px; border-radius:14px; font-size:20px; font-weight:900; letter-spacing:2px;
+    cursor:pointer; color:#1a0b02; border:none;
+    background:linear-gradient(180deg,#fde047,#f59e0b); box-shadow:0 6px 0 #b45309,0 0 22px rgba(245,158,11,.6); }
+  .lever-btn:active { transform:translateY(3px); box-shadow:0 3px 0 #b45309; }
+  .lever-btn:disabled { filter:grayscale(.6) brightness(.8); cursor:default; }
+
+  /* Lucky Wheel */
+  .wheel-wrap { position:relative; width:230px; height:230px; margin:10px auto 6px; }
+  .wheel-pin { position:absolute; top:-4px; left:50%; transform:translateX(-50%); z-index:3;
+    width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent;
+    border-top:22px solid #f43f5e; filter:drop-shadow(0 0 5px rgba(244,63,94,.8)); }
+  .wheel { width:230px; height:230px; border-radius:50%; border:6px solid #ffd54a;
+    box-shadow:0 0 24px rgba(255,213,74,.5),inset 0 0 24px rgba(0,0,0,.5);
+    transition:transform 4s cubic-bezier(.17,.67,.28,1); }
   .claim .toian  { background:rgba(45,212,191,.16); color:#5eead4; border:1px solid rgba(45,212,191,.6);
                    box-shadow:0 0 10px rgba(45,212,191,.22); }
   .claim .toevan { background:rgba(251,191,36,.16); color:#fcd34d; border:1px solid rgba(251,191,36,.6);
@@ -281,19 +351,47 @@
 <body>
 <div id="app"><div id="msg">Loading chores…</div></div>
 
-<!-- Chore Casino: a kid stakes weekly points on a 1-in-4 double-or-nothing spin -->
-<div id="casino" class="casino-ov" onclick="if(event.target===this)closeCasino()">
-  <div class="casino-box">
-    <button class="casino-x" onclick="closeCasino()">✕</button>
-    <div class="casino-title">🎰 CHORE CASINO</div>
-    <div class="casino-who" id="casinoWho">—</div>
-    <div class="casino-bal">Balance: <b id="casinoBal">0</b> pts</div>
-    <div class="reels" id="reels"><span>🍒</span><span>🍋</span><span>💎</span></div>
-    <div class="casino-msg" id="casinoMsg">Win = <b>double</b> your bet. Lose = it's gone. The house wins 3 of every 4 — bet smart.</div>
-    <div class="chips" id="chips"></div>
-    <div class="casino-betrow">Bet <b id="casinoWager">0</b> pts &nbsp;·&nbsp; enter your code:
-      <input id="casinoPin" class="casino-pin" inputmode="numeric" maxlength="6" placeholder="code"></div>
-    <button id="spinBtn" class="spin-btn" onclick="spin()">SPIN</button>
+<!-- The Chore Casino: code-gated club, Slots + Lucky Wheel, real points -->
+<div id="casino" class="casino-ov" onclick="if(event.target===this)leaveCasino()">
+  <div class="club">
+    <button class="club-x" onclick="leaveCasino()">✕</button>
+
+    <div class="screen" id="scr-entry">
+      <div class="club-sign"><span class="ico">🎰</span> CHORE CASINO <span class="ico">🎰</span></div>
+      <div class="club-tag">— MEMBERS ONLY —</div>
+      <div class="entry-msg" id="entryMsg">Enter your secret code to play</div>
+      <input id="entryPin" class="entry-pin" inputmode="numeric" maxlength="6" readonly placeholder="••••">
+      <div class="keypad" id="keypad"></div>
+    </div>
+
+    <div class="screen" id="scr-lobby" style="display:none">
+      <div class="club-sign small"><span class="ico">🎩</span> <span id="lobbyWho">Welcome</span></div>
+      <div class="wallet">💰 <b class="walletBal">0</b> <span>points</span></div>
+      <div class="games">
+        <button class="game-card slots" onclick="showGame('slots')"><span class="g-ico">🎰</span><span class="g-name">SLOTS</span><span class="g-sub">match 3 to win</span></button>
+        <button class="game-card wheel" onclick="showGame('wheel')"><span class="g-ico">🎡</span><span class="g-name">LUCKY WHEEL</span><span class="g-sub">land on gold</span></button>
+      </div>
+      <div class="house-note">🏛️ The house wins <b>3 of every 4</b>. Win = <b>double</b> your bet, lose = it's gone.</div>
+      <button class="cashout-btn" onclick="leaveCasino()">🚪 Cash out &amp; leave</button>
+    </div>
+
+    <div class="screen game-screen" id="scr-slots" style="display:none">
+      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎰 SLOTS</span><span class="wallet mini">💰 <b class="walletBal">0</b></span></div>
+      <div class="reels" id="reels"><span>🍒</span><span>🍋</span><span>💎</span></div>
+      <div class="game-msg" id="slotsMsg">Pick a bet and pull the lever.</div>
+      <div class="chips" id="slotsChips"></div>
+      <div class="betline">Bet: <b id="slotsWager">0</b> pts</div>
+      <button id="slotsBtn" class="lever-btn" onclick="play('slots')">SPIN</button>
+    </div>
+
+    <div class="screen game-screen" id="scr-wheel" style="display:none">
+      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎡 LUCKY WHEEL</span><span class="wallet mini">💰 <b class="walletBal">0</b></span></div>
+      <div class="wheel-wrap"><div class="wheel-pin"></div><div class="wheel" id="wheel"></div></div>
+      <div class="game-msg" id="wheelMsg">Spin — land on a gold slice to double up.</div>
+      <div class="chips" id="wheelChips"></div>
+      <div class="betline">Bet: <b id="wheelWager">0</b> pts</div>
+      <button id="wheelBtn" class="lever-btn" onclick="play('wheel')">SPIN THE WHEEL</button>
+    </div>
   </div>
 </div>
 <script>
@@ -460,7 +558,6 @@ function render(){
     const donePts = doneK.reduce((s, c) => s + (parseInt(c.points) || 0), 0);
     return '<div class="kpanel ' + k + '">'
       + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
-      + '<button class="casino-btn" onclick="openCasino(\'' + k + '\')">🎰 Casino</button>'
       + '<span class="kpts">' + val + ' <small>/ ' + t + '</small></span>'
       + '<span class="qcount">' + (rej.length + q.length) + ' IN QUEUE'
       + (rej.length ? ' · ' + rej.length + ' TO FIX' : '')
@@ -482,6 +579,15 @@ function render(){
 
   // parent-only: drop a one-off "ad-hoc" chore straight into a kid's queue
   html += '<button class="adhoc-btn" onclick="adhocChore()">🎯 Ad-Hoc Chore Addition</button>';
+
+  // the big flashing casino marquee — tap to enter (code-gated inside)
+  html += '<button class="casino-marquee" onclick="openCasino()">'
+       +   '<span class="cm-bulbs"></span>'
+       +   '<span class="cm-inner"><span class="cm-ico">🎰</span>'
+       +     '<span class="cm-txt"><span class="cm-title">THE CHORE CASINO</span>'
+       +       '<span class="cm-sub">Bet your points · tap to enter</span></span>'
+       +     '<span class="cm-ico">🎲</span></span>'
+       + '</button>';
 
   // ===== two columns: board + done on the left, kid queues on the right =====
   html += '<div class="cols"><div class="colL">';
@@ -633,74 +739,115 @@ async function delChore(id){ if(!confirm('Delete this chore?')) return;
 const CLAIM_CODES = {ian:'1111', evan:'2222'};  // change these!
 const PARENT_CODE = '0000';  // change this!
 
-/* ===== Chore Casino ===== */
+/* ===== The Chore Casino (code-gated club: Slots + Lucky Wheel) ===== */
 const SYMS = ['🍒','🍋','💎','🔔','⭐','7️⃣'];
-let casinoKid = null, casinoWager = 0, casinoBalance = 0;
+let casinoKid = null, casinoBalance = 0, casinoWager = 0, casinoGame = null;
+const WHEEL_GOLD = [1,5];   // 2 of 8 slices = 25% win, shown on the wheel
+
 function crand(){ return SYMS[Math.floor(Math.random()*SYMS.length)]; }
-function setReels(arr){ document.getElementById('reels').innerHTML = arr.map(s=>'<span>'+s+'</span>').join(''); }
-function landLose(){ let a=[crand(),crand(),crand()];
-  if(a[0]===a[1] && a[1]===a[2]) a[2]=SYMS[(SYMS.indexOf(a[2])+1)%SYMS.length]; return a; }
-function openCasino(kid){
-  casinoKid = kid; casinoWager = 0;
-  casinoBalance = (D && D.totals && D.totals[kid]) || 0;
-  const box = document.querySelector('.casino-box'); box.classList.remove('win','lose');
-  document.getElementById('casinoWho').textContent = (kid==='ian'?'Ian':'Evan') + "’s luck";
-  document.getElementById('casinoBal').textContent = casinoBalance;
-  document.getElementById('casinoMsg').innerHTML = "Win = <b>double</b> your bet. Lose = it’s gone. The house wins 3 of every 4 — bet smart.";
-  document.getElementById('casinoWager').textContent = '0';
-  document.getElementById('casinoPin').value = '';
-  const btn = document.getElementById('spinBtn'); btn.disabled = casinoBalance<=0; btn.textContent = 'SPIN';
-  setReels(['🍒','🍋','💎']);
-  const chips = [5,10,25,50].filter(v=>v<=casinoBalance);
-  if (casinoBalance>0 && chips.indexOf(casinoBalance)<0) chips.push(casinoBalance);
-  document.getElementById('chips').innerHTML = casinoBalance>0
-    ? chips.map(v=>'<button class="chip" onclick="pickChip('+v+',this)">'+(v===casinoBalance?'ALL '+v:v)+'</button>').join('')
-    : '<div style="color:#fca5a5;font-weight:800">No points to bet yet — go earn some!</div>';
+function setReels(arr){ const r=document.getElementById('reels'); if(r) r.innerHTML = arr.map(s=>'<span>'+s+'</span>').join(''); }
+function landLose(){ let a=[crand(),crand(),crand()]; if(a[0]===a[1]&&a[1]===a[2]) a[2]=SYMS[(SYMS.indexOf(a[2])+1)%SYMS.length]; return a; }
+function showScreen(id){ ['scr-entry','scr-lobby','scr-slots','scr-wheel'].forEach(s=>{ const el=document.getElementById(s); if(el) el.style.display=(s===id?'block':'none'); }); }
+function updateWallet(){ [].forEach.call(document.querySelectorAll('.walletBal'), b=>b.textContent=casinoBalance); }
+
+function openCasino(){
+  casinoKid=null; casinoBalance=0; casinoWager=0;
+  document.getElementById('entryPin').value='';
+  const em=document.getElementById('entryMsg'); em.textContent='Enter your secret code to play'; em.classList.remove('deny');
+  buildKeypad(); showScreen('scr-entry');
   document.getElementById('casino').classList.add('show');
 }
-function closeCasino(){ document.getElementById('casino').classList.remove('show'); }
-function pickChip(v, el){ casinoWager = v; document.getElementById('casinoWager').textContent = v;
-  [].forEach.call(document.querySelectorAll('#chips .chip'), c=>c.classList.remove('on'));
-  if (el) el.classList.add('on'); }
-async function spin(){
-  const kid = casinoKid;
-  if (!casinoWager || casinoWager<=0){ alert('Pick a bet first.'); return; }
-  if (casinoWager>casinoBalance){ alert('That is more than you have.'); return; }
-  if ((document.getElementById('casinoPin').value||'').trim() !== CLAIM_CODES[kid]){ alert('Wrong code — nice try.'); return; }
-  const btn = document.getElementById('spinBtn'); btn.disabled = true; btn.textContent = 'SPINNING…';
-  const reels = document.getElementById('reels'); reels.classList.add('spinning');
-  const box = document.querySelector('.casino-box'); box.classList.remove('win','lose');
-  const whirl = setInterval(()=> setReels([crand(),crand(),crand()]), 90);
-  let res;
-  try { res = await api('/chores/gamble', {kid:kid, wager:casinoWager}); }
-  catch(e){ clearInterval(whirl); reels.classList.remove('spinning'); btn.disabled=false; btn.textContent='SPIN';
-    alert(e.detail || 'Casino is closed right now.'); return; }
-  setTimeout(()=>{
-    clearInterval(whirl); reels.classList.remove('spinning');
-    if (res.result==='win'){ setReels(['🍒','🍒','🍒']); box.classList.add('win');
-      document.getElementById('casinoMsg').innerHTML = '🎉 WINNER! +'+res.wager+' pts — you doubled it! New balance '+res.new_total+'.';
-      casinoBurst(); }
-    else { setReels(landLose()); box.classList.add('lose');
-      document.getElementById('casinoMsg').innerHTML = '💸 House wins. −'+res.wager+' pts. New balance '+res.new_total+'.'; }
-    casinoBalance = res.new_total;
-    document.getElementById('casinoBal').textContent = res.new_total;
-    casinoWager = 0; document.getElementById('casinoWager').textContent = '0';
-    [].forEach.call(document.querySelectorAll('#chips .chip'), c=>c.classList.remove('on'));
-    // rebuild chip options for the new (smaller) balance
-    const chips = [5,10,25,50].filter(v=>v<=casinoBalance);
-    if (casinoBalance>0 && chips.indexOf(casinoBalance)<0) chips.push(casinoBalance);
-    document.getElementById('chips').innerHTML = casinoBalance>0
-      ? chips.map(v=>'<button class="chip" onclick="pickChip('+v+',this)">'+(v===casinoBalance?'ALL '+v:v)+'</button>').join('')
-      : '<div style="color:#fca5a5;font-weight:800">Tapped out. Go earn more points!</div>';
-    btn.textContent = 'SPIN AGAIN'; btn.disabled = casinoBalance<=0;
-    load();
-  }, 1500);
+function leaveCasino(){ document.getElementById('casino').classList.remove('show'); }
+
+function buildKeypad(){
+  const keys=['1','2','3','4','5','6','7','8','9','C','0','⌫','ENTER'];
+  document.getElementById('keypad').innerHTML = keys.map(k=>{
+    if(k==='ENTER') return '<button class="enter" onclick="enterClub()">ENTER 🎟️</button>';
+    if(k==='⌫') return '<button onclick="keyPin(\'del\')">⌫</button>';
+    if(k==='C')  return '<button onclick="keyPin(\'clr\')">C</button>';
+    return '<button onclick="keyPin(\''+k+'\')">'+k+'</button>';
+  }).join('');
 }
-function casinoBurst(){ const box=document.querySelector('.casino-box');
-  for(let i=0;i<16;i++){ const s=document.createElement('div'); s.textContent = ['🎉','⭐','💰','🍒'][i%4];
-    s.style.cssText='position:absolute;left:'+(8+Math.random()*84)+'%;top:42%;font-size:'+(16+Math.random()*20)+'px;pointer-events:none;z-index:5;transition:transform 1.1s ease-out,opacity 1.1s;';
-    box.appendChild(s); requestAnimationFrame(()=>{ s.style.transform='translateY(-'+(120+Math.random()*170)+'px) rotate('+(Math.random()*360)+'deg)'; s.style.opacity='0'; });
-    setTimeout(()=>s.remove(),1150); } }
+function keyPin(k){ const inp=document.getElementById('entryPin');
+  if(k==='del') inp.value=inp.value.slice(0,-1);
+  else if(k==='clr') inp.value='';
+  else if(inp.value.length<6) inp.value+=k; }
+function enterClub(){
+  const pin=(document.getElementById('entryPin').value||'').trim();
+  let kid=null; for(const k in CLAIM_CODES){ if(CLAIM_CODES[k]===pin) kid=k; }
+  if(!kid){ const em=document.getElementById('entryMsg'); em.textContent='⛔ Access denied — wrong code'; em.classList.add('deny');
+    const club=document.querySelector('.club'); club.classList.add('shake'); setTimeout(()=>club.classList.remove('shake'),400);
+    document.getElementById('entryPin').value=''; return; }
+  casinoKid=kid; casinoBalance=(D && D.totals && D.totals[kid])||0;
+  document.getElementById('lobbyWho').textContent='Welcome, '+(kid==='ian'?'Ian':'Evan');
+  updateWallet(); showScreen('scr-lobby');
+}
+function showLobby(){ casinoBalance=(D && D.totals && D.totals[casinoKid])||casinoBalance; updateWallet(); showScreen('scr-lobby'); }
+
+function buildChips(game){
+  const opts=[5,10,20].filter(v=>v<=casinoBalance);
+  if(casinoBalance>0 && opts.indexOf(casinoBalance)<0) opts.push(casinoBalance);
+  document.getElementById(game+'Chips').innerHTML = casinoBalance>0
+    ? opts.map(v=>'<button class="chip" onclick="pickChip('+v+',this,\''+game+'\')">'+(v===casinoBalance?'ALL '+v:v)+'</button>').join('')
+    : '<div style="color:#fca5a5;font-weight:900">No points to bet — go earn some!</div>';
+  document.getElementById(game+'Wager').textContent='0'; casinoWager=0;
+}
+function pickChip(v, el, game){ casinoWager=v; document.getElementById(game+'Wager').textContent=v;
+  [].forEach.call(document.querySelectorAll('#'+game+'Chips .chip'), c=>c.classList.remove('on')); if(el) el.classList.add('on'); }
+
+function showGame(game){
+  casinoGame=game; casinoWager=0;
+  const scr=document.getElementById('scr-'+game); scr.classList.remove('win','lose');
+  if(game==='slots'){ setReels(['🍒','🍋','💎']); document.getElementById('slotsMsg').innerHTML='Pick a bet and pull the lever.';
+    const b=document.getElementById('slotsBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN'; }
+  if(game==='wheel'){ buildWheel(); document.getElementById('wheelMsg').innerHTML='Spin — land on a gold slice to double up.';
+    const b=document.getElementById('wheelBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN THE WHEEL'; }
+  buildChips(game); updateWallet(); showScreen('scr-'+game);
+}
+function buildWheel(){
+  const w=document.getElementById('wheel'); const segs=[];
+  for(let i=0;i<8;i++){ const c = WHEEL_GOLD.indexOf(i)>=0 ? '#fbbf24' : (i%2?'#5b21b6':'#134e2b'); segs.push(c+' '+(i*45)+'deg '+((i+1)*45)+'deg'); }
+  w.style.transition='none'; w.style.transform='rotate(0deg)';
+  w.style.background='conic-gradient('+segs.join(',')+')'; void w.offsetWidth;
+}
+async function play(game){
+  if(!casinoWager||casinoWager<=0){ alert('Pick a bet first.'); return; }
+  if(casinoWager>casinoBalance){ alert('That is more than you have.'); return; }
+  const scr=document.getElementById('scr-'+game); scr.classList.remove('win','lose');
+  const btn=document.getElementById(game+'Btn'); btn.disabled=true; btn.textContent='…';
+  let whirl=null;
+  if(game==='slots'){ const reels=document.getElementById('reels'); reels.classList.add('spinning'); whirl=setInterval(()=>setReels([crand(),crand(),crand()]),90); }
+  let res;
+  try { res = await api('/chores/gamble',{kid:casinoKid, wager:casinoWager}); }
+  catch(e){ if(whirl)clearInterval(whirl); const rr=document.getElementById('reels'); if(rr)rr.classList.remove('spinning');
+    btn.disabled=false; btn.textContent=game==='slots'?'SPIN':'SPIN THE WHEEL'; alert(e.detail||'Casino is closed right now.'); return; }
+  const win = res.result==='win';
+  if(game==='wheel'){
+    const idx = win ? WHEEL_GOLD[Math.floor(Math.random()*WHEEL_GOLD.length)] : [0,2,3,4,6,7][Math.floor(Math.random()*6)];
+    const R = 1800 - (idx*45+22.5);
+    const w=document.getElementById('wheel'); w.style.transition='transform 4s cubic-bezier(.17,.67,.28,1)'; w.style.transform='rotate('+R+'deg)';
+    setTimeout(()=>revealResult(game,res,win), 4100);
+  } else {
+    setTimeout(()=>{ if(whirl)clearInterval(whirl); const reels=document.getElementById('reels'); reels.classList.remove('spinning');
+      setReels(win?['🍒','🍒','🍒']:landLose()); revealResult(game,res,win); }, 1500);
+  }
+}
+function revealResult(game,res,win){
+  const scr=document.getElementById('scr-'+game); scr.classList.add(win?'win':'lose');
+  document.getElementById(game+'Msg').innerHTML = win
+    ? '🎉 WINNER! +'+res.wager+' pts — doubled! Balance '+res.new_total+'.'
+    : '💸 House wins. −'+res.wager+' pts. Balance '+res.new_total+'.';
+  if(win) casinoBurst();
+  casinoBalance=res.new_total; updateWallet(); buildChips(game);
+  const btn=document.getElementById(game+'Btn'); btn.disabled=casinoBalance<=0;
+  btn.textContent = casinoBalance<=0 ? 'TAPPED OUT' : 'SPIN AGAIN';
+  load();
+}
+function casinoBurst(){ const club=document.querySelector('.club');
+  for(let i=0;i<20;i++){ const s=document.createElement('div'); s.textContent=['🎉','⭐','💰','🍒','🎊'][i%5];
+    s.style.cssText='position:absolute;left:'+(6+Math.random()*88)+'%;top:40%;font-size:'+(16+Math.random()*22)+'px;pointer-events:none;z-index:5;transition:transform 1.2s ease-out,opacity 1.2s;';
+    club.appendChild(s); requestAnimationFrame(()=>{ s.style.transform='translateY(-'+(140+Math.random()*180)+'px) rotate('+(Math.random()*360)+'deg)'; s.style.opacity='0'; });
+    setTimeout(()=>s.remove(),1250); } }
 async function claim(id, kid){
   const code = prompt((kid==='ian'?'Ian':'Evan') + ' — enter your code:');
   if (code === null) return;
