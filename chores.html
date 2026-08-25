@@ -340,6 +340,31 @@
   .wheel { width:230px; height:230px; border-radius:50%; border:6px solid #ffd54a;
     box-shadow:0 0 24px rgba(255,213,74,.5),inset 0 0 24px rgba(0,0,0,.5);
     transition:transform 4s cubic-bezier(.17,.67,.28,1); }
+
+  /* POINTS "L$" coin branding */
+  .ledchip { display:inline-flex; align-items:center; justify-content:center; min-width:1.3em; height:1.3em; padding:0 .16em;
+    border-radius:50%; background:radial-gradient(circle at 38% 30%, #fffbe6 0%, #fcd34d 45%, #f59e0b 100%);
+    color:#7c2d12; font-weight:900; font-size:.7em; letter-spacing:-.5px; border:2px solid #fff7d6;
+    box-shadow:0 0 7px rgba(245,158,11,.75),inset 0 -2px 3px rgba(146,64,14,.5); vertical-align:-.2em; }
+  .ledchip.big { font-size:1.05em; width:1.5em; height:1.5em; }
+  .ledchip.spin { animation:coinflip 2.6s linear infinite; }
+  @keyframes coinflip { 0%{transform:perspective(60px) rotateY(0)} 100%{transform:perspective(60px) rotateY(360deg)} }
+  .wallet .ledchip { font-size:.85em; }
+
+  /* Demo mode + entry demo button */
+  .demo-btn { display:block; width:100%; margin-top:16px; padding:11px; border-radius:12px; cursor:pointer;
+    font-size:12.5px; font-weight:800; color:#a7f3d0; background:rgba(16,185,129,.12);
+    border:1px dashed rgba(16,185,129,.55); }
+  .demo-btn:active { background:rgba(16,185,129,.25); }
+  .demo-badge { font-size:12px; font-weight:900; letter-spacing:1px; color:#052e16; background:#34d399;
+    border-radius:8px; padding:2px 8px; margin-left:6px; }
+  .club.demo { border-color:#34d399; box-shadow:0 0 44px rgba(52,211,153,.45),inset 0 0 60px rgba(0,0,0,.6); }
+  .club.demo::before { background-image:radial-gradient(circle,#fff 1.5px,#34d399 2.5px,transparent 3.3px); }
+
+  /* shared code keypad (reuses the club look, tighter box) */
+  .codepad-box { width:min(340px,92vw); padding:22px 18px 20px; }
+  .codepad-box .club-sign.small { font-size:20px; margin-top:2px; }
+  .codepad-box .entry-msg { margin:6px 10px 8px; }
   .claim .toian  { background:rgba(45,212,191,.16); color:#5eead4; border:1px solid rgba(45,212,191,.6);
                    box-shadow:0 0 10px rgba(45,212,191,.22); }
   .claim .toevan { background:rgba(251,191,36,.16); color:#fcd34d; border:1px solid rgba(251,191,36,.6);
@@ -350,6 +375,17 @@
 </head>
 <body>
 <div id="app"><div id="msg">Loading chores…</div></div>
+
+<!-- Shared keypad for every code prompt (claim / reject / parent actions) -->
+<div id="codepad" class="casino-ov" onclick="if(event.target===this)codepadCancel()">
+  <div class="club codepad-box">
+    <button class="club-x" onclick="codepadCancel()">✕</button>
+    <div class="club-sign small" id="cpTitle">🔐 CODE</div>
+    <div class="entry-msg" id="cpSub">Enter your code</div>
+    <input id="cpPin" class="entry-pin" inputmode="numeric" maxlength="6" readonly placeholder="••••">
+    <div class="keypad" id="cpKeypad"></div>
+  </div>
+</div>
 
 <!-- The Chore Casino: code-gated club, Slots + Lucky Wheel, real points -->
 <div id="casino" class="casino-ov" onclick="if(event.target===this)leaveCasino()">
@@ -362,21 +398,23 @@
       <div class="entry-msg" id="entryMsg">Enter your secret code to play</div>
       <input id="entryPin" class="entry-pin" inputmode="numeric" maxlength="6" readonly placeholder="••••">
       <div class="keypad" id="keypad"></div>
+      <button class="demo-btn" onclick="enterDemo()">🧪 Just testing? Play DEMO MODE — fake L$, no real POINTS touched</button>
     </div>
 
     <div class="screen" id="scr-lobby" style="display:none">
-      <div class="club-sign small"><span class="ico">🎩</span> <span id="lobbyWho">Welcome</span></div>
-      <div class="wallet">💰 <b class="walletBal">0</b> <span>points</span></div>
+      <div class="club-sign small"><span class="ico">🎩</span> <span id="lobbyWho">Welcome</span>
+        <span id="demoBadge" class="demo-badge" style="display:none">🧪 DEMO</span></div>
+      <div class="wallet"><span class="ledchip spin">P</span> <b class="walletBal">0</b> <span>POINTS</span></div>
       <div class="games">
         <button class="game-card slots" onclick="showGame('slots')"><span class="g-ico">🎰</span><span class="g-name">SLOTS</span><span class="g-sub">match 3 to win</span></button>
         <button class="game-card wheel" onclick="showGame('wheel')"><span class="g-ico">🎡</span><span class="g-name">LUCKY WHEEL</span><span class="g-sub">land on gold</span></button>
       </div>
-      <div class="house-note">🏛️ The house wins <b>3 of every 4</b>. Win = <b>double</b> your bet, lose = it's gone.</div>
+      <div class="house-note">🏛️ The house wins <b>3 of every 4</b>. Win = <b>double</b> your <span class="ledchip">P</span>, lose = it's gone.</div>
       <button class="cashout-btn" onclick="leaveCasino()">🚪 Cash out &amp; leave</button>
     </div>
 
     <div class="screen game-screen" id="scr-slots" style="display:none">
-      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎰 SLOTS</span><span class="wallet mini">💰 <b class="walletBal">0</b></span></div>
+      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎰 SLOTS</span><span class="wallet mini"><span class="ledchip">P</span> <b class="walletBal">0</b></span></div>
       <div class="reels" id="reels"><span>🍒</span><span>🍋</span><span>💎</span></div>
       <div class="game-msg" id="slotsMsg">Pick a bet and pull the lever.</div>
       <div class="chips" id="slotsChips"></div>
@@ -385,7 +423,7 @@
     </div>
 
     <div class="screen game-screen" id="scr-wheel" style="display:none">
-      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎡 LUCKY WHEEL</span><span class="wallet mini">💰 <b class="walletBal">0</b></span></div>
+      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">🎡 LUCKY WHEEL</span><span class="wallet mini"><span class="ledchip">P</span> <b class="walletBal">0</b></span></div>
       <div class="wheel-wrap"><div class="wheel-pin"></div><div class="wheel" id="wheel"></div></div>
       <div class="game-msg" id="wheelMsg">Spin — land on a gold slice to double up.</div>
       <div class="chips" id="wheelChips"></div>
@@ -585,8 +623,8 @@ function render(){
        +   '<span class="cm-bulbs"></span>'
        +   '<span class="cm-inner"><span class="cm-ico">🎰</span>'
        +     '<span class="cm-txt"><span class="cm-title">THE CHORE CASINO</span>'
-       +       '<span class="cm-sub">Bet your points · tap to enter</span></span>'
-       +     '<span class="cm-ico">🎲</span></span>'
+       +       '<span class="cm-sub">Bet your <b>POINTS</b> · tap to enter</span></span>'
+       +     '<span class="cm-ico"><span class="ledchip big spin">P</span></span></span>'
        + '</button>';
 
   // ===== two columns: board + done on the left, kid queues on the right =====
@@ -739,9 +777,41 @@ async function delChore(id){ if(!confirm('Delete this chore?')) return;
 const CLAIM_CODES = {ian:'1111', evan:'2222'};  // change these!
 const PARENT_CODE = '0000';  // change this!
 
+/* ===== Shared code keypad (claim / reject / all parent actions) ===== */
+let _cpResolve = null, _cpValidate = null;
+function askCode(opts){
+  return new Promise(resolve=>{
+    _cpResolve = resolve; _cpValidate = opts.validate;
+    document.getElementById('cpTitle').innerHTML = opts.title || '🔐 CODE';
+    const sub = document.getElementById('cpSub'); sub.innerHTML = opts.sub || 'Enter your code'; sub.classList.remove('deny');
+    document.getElementById('cpPin').value = '';
+    document.querySelector('.codepad-box').style.borderColor = opts.accent || '#ffd54a';
+    const keys=['1','2','3','4','5','6','7','8','9','C','0','⌫','ENTER'];
+    document.getElementById('cpKeypad').innerHTML = keys.map(k=>{
+      if(k==='ENTER') return '<button class="enter" onclick="cpEnter()">ENTER ✓</button>';
+      if(k==='⌫') return '<button onclick="cpKey(\'del\')">⌫</button>';
+      if(k==='C')  return '<button onclick="cpKey(\'clr\')">C</button>';
+      return '<button onclick="cpKey(\''+k+'\')">'+k+'</button>';
+    }).join('');
+    document.getElementById('codepad').classList.add('show');
+  });
+}
+function cpKey(k){ const inp=document.getElementById('cpPin');
+  if(k==='del') inp.value=inp.value.slice(0,-1); else if(k==='clr') inp.value=''; else if(inp.value.length<6) inp.value+=k; }
+function cpEnter(){
+  const pin=(document.getElementById('cpPin').value||'').trim();
+  if(_cpValidate && _cpValidate(pin)){ codepadClose(); const r=_cpResolve; _cpResolve=null; if(r) r(true); }
+  else { const sub=document.getElementById('cpSub'); sub.textContent='⛔ Wrong code — try again'; sub.classList.add('deny');
+    const box=document.querySelector('.codepad-box'); box.classList.add('shake'); setTimeout(()=>box.classList.remove('shake'),400);
+    document.getElementById('cpPin').value=''; }
+}
+function codepadClose(){ document.getElementById('codepad').classList.remove('show'); }
+function codepadCancel(){ codepadClose(); const r=_cpResolve; _cpResolve=null; if(r) r(false); }
+
 /* ===== The Chore Casino (code-gated club: Slots + Lucky Wheel) ===== */
 const SYMS = ['🍒','🍋','💎','🔔','⭐','7️⃣'];
-let casinoKid = null, casinoBalance = 0, casinoWager = 0, casinoGame = null;
+const LED = '<span class="ledchip">P</span>';
+let casinoKid = null, casinoBalance = 0, casinoWager = 0, casinoGame = null, demoMode = false;
 const WHEEL_GOLD = [1,5];   // 2 of 8 slices = 25% win, shown on the wheel
 
 function crand(){ return SYMS[Math.floor(Math.random()*SYMS.length)]; }
@@ -751,11 +821,20 @@ function showScreen(id){ ['scr-entry','scr-lobby','scr-slots','scr-wheel'].forEa
 function updateWallet(){ [].forEach.call(document.querySelectorAll('.walletBal'), b=>b.textContent=casinoBalance); }
 
 function openCasino(){
-  casinoKid=null; casinoBalance=0; casinoWager=0;
+  casinoKid=null; casinoBalance=0; casinoWager=0; demoMode=false;
   document.getElementById('entryPin').value='';
   const em=document.getElementById('entryMsg'); em.textContent='Enter your secret code to play'; em.classList.remove('deny');
+  document.getElementById('demoBadge').style.display='none';
+  document.querySelector('#casino .club').classList.remove('demo');
   buildKeypad(); showScreen('scr-entry');
   document.getElementById('casino').classList.add('show');
+}
+function enterDemo(){
+  demoMode=true; casinoKid='demo'; casinoBalance=500;
+  document.getElementById('lobbyWho').textContent='Demo Player';
+  document.getElementById('demoBadge').style.display='inline-block';
+  document.querySelector('#casino .club').classList.add('demo');
+  updateWallet(); showScreen('scr-lobby');
 }
 function leaveCasino(){ document.getElementById('casino').classList.remove('show'); }
 
@@ -776,13 +855,15 @@ function enterClub(){
   const pin=(document.getElementById('entryPin').value||'').trim();
   let kid=null; for(const k in CLAIM_CODES){ if(CLAIM_CODES[k]===pin) kid=k; }
   if(!kid){ const em=document.getElementById('entryMsg'); em.textContent='⛔ Access denied — wrong code'; em.classList.add('deny');
-    const club=document.querySelector('.club'); club.classList.add('shake'); setTimeout(()=>club.classList.remove('shake'),400);
+    const club=document.querySelector('#casino .club'); club.classList.add('shake'); setTimeout(()=>club.classList.remove('shake'),400);
     document.getElementById('entryPin').value=''; return; }
-  casinoKid=kid; casinoBalance=(D && D.totals && D.totals[kid])||0;
+  demoMode=false; casinoKid=kid; casinoBalance=(D && D.totals && D.totals[kid])||0;
+  document.getElementById('demoBadge').style.display='none';
+  document.querySelector('#casino .club').classList.remove('demo');
   document.getElementById('lobbyWho').textContent='Welcome, '+(kid==='ian'?'Ian':'Evan');
   updateWallet(); showScreen('scr-lobby');
 }
-function showLobby(){ casinoBalance=(D && D.totals && D.totals[casinoKid])||casinoBalance; updateWallet(); showScreen('scr-lobby'); }
+function showLobby(){ if(!demoMode) casinoBalance=(D && D.totals && D.totals[casinoKid])||casinoBalance; updateWallet(); showScreen('scr-lobby'); }
 
 function buildChips(game){
   const opts=[5,10,20].filter(v=>v<=casinoBalance);
@@ -818,9 +899,15 @@ async function play(game){
   let whirl=null;
   if(game==='slots'){ const reels=document.getElementById('reels'); reels.classList.add('spinning'); whirl=setInterval(()=>setReels([crand(),crand(),crand()]),90); }
   let res;
-  try { res = await api('/chores/gamble',{kid:casinoKid, wager:casinoWager}); }
-  catch(e){ if(whirl)clearInterval(whirl); const rr=document.getElementById('reels'); if(rr)rr.classList.remove('spinning');
-    btn.disabled=false; btn.textContent=game==='slots'?'SPIN':'SPIN THE WHEEL'; alert(e.detail||'Casino is closed right now.'); return; }
+  if(demoMode){
+    const w = Math.random() < 0.25;                       // same 25% odds, no server, no real points
+    res = {result:w?'win':'lose', wager:casinoWager, delta:w?casinoWager:-casinoWager, new_total:casinoBalance+(w?casinoWager:-casinoWager)};
+    await new Promise(r=>setTimeout(r,250));
+  } else {
+    try { res = await api('/chores/gamble',{kid:casinoKid, wager:casinoWager}); }
+    catch(e){ if(whirl)clearInterval(whirl); const rr=document.getElementById('reels'); if(rr)rr.classList.remove('spinning');
+      btn.disabled=false; btn.textContent=game==='slots'?'SPIN':'SPIN THE WHEEL'; alert(e.detail||'Casino is closed right now.'); return; }
+  }
   const win = res.result==='win';
   if(game==='wheel'){
     const idx = win ? WHEEL_GOLD[Math.floor(Math.random()*WHEEL_GOLD.length)] : [0,2,3,4,6,7][Math.floor(Math.random()*6)];
@@ -835,23 +922,24 @@ async function play(game){
 function revealResult(game,res,win){
   const scr=document.getElementById('scr-'+game); scr.classList.add(win?'win':'lose');
   document.getElementById(game+'Msg').innerHTML = win
-    ? '🎉 WINNER! +'+res.wager+' pts — doubled! Balance '+res.new_total+'.'
-    : '💸 House wins. −'+res.wager+' pts. Balance '+res.new_total+'.';
+    ? '🎉 WINNER! +'+res.wager+' '+LED+' — you doubled it! Balance '+res.new_total+'.'
+    : '💸 House wins. −'+res.wager+' '+LED+' gone. Balance '+res.new_total+'.';
   if(win) casinoBurst();
   casinoBalance=res.new_total; updateWallet(); buildChips(game);
   const btn=document.getElementById(game+'Btn'); btn.disabled=casinoBalance<=0;
   btn.textContent = casinoBalance<=0 ? 'TAPPED OUT' : 'SPIN AGAIN';
-  load();
+  if(!demoMode) load();
 }
-function casinoBurst(){ const club=document.querySelector('.club');
+function casinoBurst(){ const club=document.querySelector('#casino .club');
   for(let i=0;i<20;i++){ const s=document.createElement('div'); s.textContent=['🎉','⭐','💰','🍒','🎊'][i%5];
     s.style.cssText='position:absolute;left:'+(6+Math.random()*88)+'%;top:40%;font-size:'+(16+Math.random()*22)+'px;pointer-events:none;z-index:5;transition:transform 1.2s ease-out,opacity 1.2s;';
     club.appendChild(s); requestAnimationFrame(()=>{ s.style.transform='translateY(-'+(140+Math.random()*180)+'px) rotate('+(Math.random()*360)+'deg)'; s.style.opacity='0'; });
     setTimeout(()=>s.remove(),1250); } }
 async function claim(id, kid){
-  const code = prompt((kid==='ian'?'Ian':'Evan') + ' — enter your code:');
-  if (code === null) return;
-  if ((code||'').trim() !== CLAIM_CODES[kid]) { alert('nice try'); return; }
+  const who = kid==='ian'?'Ian':'Evan';
+  const ok = await askCode({title:'🧺 '+who+'’s Code', sub:'Enter your code to <b>accept</b> this chore',
+    accent:(kid==='ian'?'#2dd4bf':'#fbbf24'), validate:pin=>pin===CLAIM_CODES[kid]});
+  if(!ok) return;
   try { await api('/chores/claim',{id, kid}); }
   catch(e){
     if (e.status===423) alert(e.detail||'Required chores must be finished first.');
@@ -863,9 +951,10 @@ async function claim(id, kid){
 async function reject(id){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
   const who = c.done_by === 'ian' ? 'Ian' : 'Evan';
-  const comment = prompt('Send "' + (c.name||'this chore') + '" back to ' + who + '?\n\n'
-    + who + ' loses ' + (c.points||0) + ' points and it goes back on the board.\n\n'
-    + 'What needs fixing? (this shows on the chore)');
+  const ok = await askCode({title:'🚫 Parent Code', sub:'Send <b>'+esc(c.name||'this chore')+'</b> back? '+who+' loses '+(c.points||0)+' '+LED+'.',
+    accent:'#f43f5e', validate:pin=>pin===PARENT_CODE});
+  if(!ok) return;
+  const comment = prompt('What needs fixing? (this note shows on the chore)');
   if (comment === null) return;
   try { await api('/chores/reject', {id, comment}); }
   catch(e){ alert('Could not reject: ' + (e.detail||e.status)); }
@@ -876,10 +965,9 @@ async function approveFix(id){
   const kid = c.rejected && c.rejected.kid ? c.rejected.kid : null;
   if (!kid){ alert('No record of who did this one — have the kid claim it again.'); return; }
   const who = kid==='ian' ? 'Ian' : 'Evan';
-  const code = prompt('Approve the redo of "' + (c.name||'this chore') + '"?\n\n'
-    + who + ' gets the ' + (c.points||0) + ' points back.\n\nParent code:');
-  if (code === null) return;
-  if ((code||'').trim() !== PARENT_CODE){ alert('nice try'); return; }
+  const ok = await askCode({title:'✅ Parent Code', sub:'Approve the redo of <b>'+esc(c.name||'this chore')+'</b>? '+who+' gets '+(c.points||0)+' '+LED+' back.',
+    accent:'#22c55e', validate:pin=>pin===PARENT_CODE});
+  if(!ok) return;
   try { await api('/chores/claim', {id, kid}); }
   catch(e){ alert('Could not approve: ' + (e.detail||e.status)); }
   await load();
@@ -896,9 +984,9 @@ async function queueChore(id, kid){
 }
 async function assignNotify(id){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
-  const code = prompt('Assign "' + (c.name||'this chore') + '" and text the kid?\n\nParent code:');
-  if (code === null) return;
-  if ((code||'').trim() !== PARENT_CODE){ alert('nice try'); return; }
+  const ok = await askCode({title:'📣 Parent Code', sub:'Assign <b>'+esc(c.name||'this chore')+'</b> and text the kid?',
+    accent:'#fbbf24', validate:pin=>pin===PARENT_CODE});
+  if(!ok) return;
   const pick = prompt('Assign to who?\n\n  1 = Ian\n  2 = Evan');
   if (pick === null) return;
   const kid = pick.trim() === '1' ? 'ian' : pick.trim() === '2' ? 'evan' : null;
@@ -913,9 +1001,8 @@ async function assignNotify(id){
 }
 // Parent-only: create a one-off chore, drop it in a kid's queue, text them.
 async function adhocChore(){
-  const code = prompt('Ad-Hoc Chore Addition\n\nParent code:');
-  if (code === null) return;
-  if ((code||'').trim() !== PARENT_CODE){ alert('nice try'); return; }
+  const ok = await askCode({title:'🎯 Parent Code', sub:'Add a one-off ad-hoc chore', accent:'#a855f7', validate:pin=>pin===PARENT_CODE});
+  if(!ok) return;
   const name = prompt('Chore name and description:');
   if (name === null || !name.trim()) return;
   const desc = prompt('Description / instructions (optional):') || '';
