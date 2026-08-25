@@ -337,6 +337,24 @@
     background:linear-gradient(180deg,#fde047,#f59e0b); box-shadow:0 6px 0 #b45309,0 0 22px rgba(245,158,11,.6); }
   .lever-btn:active { transform:translateY(3px); box-shadow:0 3px 0 #b45309; }
   .lever-btn:disabled { filter:grayscale(.6) brightness(.8); cursor:default; }
+  /* Mines */
+  .game-card.mines { border-color:#f43f5e; box-shadow:0 0 20px rgba(244,63,94,.4); background:linear-gradient(160deg,rgba(244,63,94,.28),rgba(0,0,0,.4)); }
+  .mines-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:12px auto 6px; }
+  .mine-tile { aspect-ratio:1; border-radius:14px; font-size:34px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; background:linear-gradient(160deg,#2a3350,#141a2e); border:2px solid rgba(167,139,250,.4);
+    box-shadow:inset 0 0 12px rgba(0,0,0,.5); transition:transform .08s; user-select:none; }
+  .mine-tile:active { transform:scale(.94); }
+  .mine-tile.dead { pointer-events:none; opacity:.6; }
+  .mine-tile.gem { background:radial-gradient(circle at 50% 40%,#0e3b2a,#052e1c); border-color:#4ade80;
+    box-shadow:0 0 16px rgba(74,222,128,.7); animation:pop .25s; }
+  .mine-tile.boom { background:radial-gradient(circle at 50% 40%,#7f1d1d,#3b0a0a); border-color:#f43f5e;
+    box-shadow:0 0 20px rgba(244,63,94,.8); animation:pop .25s; }
+  @keyframes pop { 0%{transform:scale(.5)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .cash-btn { width:100%; padding:16px; border-radius:14px; font-size:19px; font-weight:900; letter-spacing:1.5px;
+    cursor:pointer; color:#052e16; border:none; margin-top:4px;
+    background:linear-gradient(180deg,#4ade80,#16a34a); box-shadow:0 6px 0 #14532d,0 0 22px rgba(34,197,94,.6); }
+  .cash-btn:active { transform:translateY(3px); box-shadow:0 3px 0 #14532d; }
+  .cash-btn b { color:#052e16; }
 
   /* Lucky Wheel */
   .wheel-wrap { position:relative; width:230px; height:230px; margin:10px auto 6px; }
@@ -414,6 +432,7 @@
       <div class="games">
         <button class="game-card slots" onclick="showGame('slots')"><span class="g-ico">🎰</span><span class="g-name">SLOTS</span><span class="g-sub">match 3 to win</span></button>
         <button class="game-card wheel" onclick="showGame('wheel')"><span class="g-ico">🎡</span><span class="g-name">LUCKY WHEEL</span><span class="g-sub">land on gold</span></button>
+        <button class="game-card mines" onclick="showGame('mines')"><span class="g-ico">💣</span><span class="g-name">MINES</span><span class="g-sub">dodge the bombs</span></button>
       </div>
       <div class="rules">
         <div class="rules-hd">📜 HOW TO WIN</div>
@@ -421,7 +440,8 @@
           • Every spin is a <b>1-in-4</b> chance to win.<br>
           • <b>WIN</b> → your bet <b>doubles</b> (get it back + the same again in <span class="ledchip">P</span>).<br>
           • <b>LOSE</b> (3 of 4) → your bet is gone.<br>
-          • <b>Slots:</b> match 🍒🍒🍒. &nbsp;<b>Wheel:</b> land on a gold slice.<br>
+          • <b>Slots</b> &amp; <b>Wheel:</b> 1-in-4, win doubles your bet.<br>
+          • <b>Mines:</b> reveal 💎 gems for a rising <b>multiplier</b> — cash out before a 💣. Greedier = riskier!<br>
           • 🏛️ The house always wins over time — bet what you can spare!
         </div>
       </div>
@@ -444,6 +464,16 @@
       <div class="chips" id="wheelChips"></div>
       <div class="betline">Bet: <b id="wheelWager">0</b> pts</div>
       <button id="wheelBtn" class="lever-btn" onclick="play('wheel')">SPIN THE WHEEL</button>
+    </div>
+
+    <div class="screen game-screen" id="scr-mines" style="display:none">
+      <div class="game-hd"><button class="back-lobby" onclick="showLobby()">‹ Lobby</button><span class="game-title">💣 MINES</span><span class="wallet mini"><span class="ledchip">P</span> <b class="walletBal">0</b></span></div>
+      <div class="mines-grid" id="minesGrid"></div>
+      <div class="game-msg" id="minesMsg">4 bombs hide in 9 tiles. Reveal 💎 gems to grow your multiplier — cash out before you hit a 💣!</div>
+      <div class="chips" id="minesChips"></div>
+      <div class="betline">Bet: <b id="minesWager">0</b> pts</div>
+      <button id="minesStartBtn" class="lever-btn" onclick="minesStart()">START</button>
+      <button id="minesCashBtn" class="cash-btn" style="display:none" onclick="minesCashout()">CASH OUT</button>
     </div>
   </div>
 </div>
@@ -833,7 +863,7 @@ const WHEEL_GOLD = [1,5];   // 2 of 8 slices = 25% win, shown on the wheel
 function crand(){ return SYMS[Math.floor(Math.random()*SYMS.length)]; }
 function setReels(arr){ const r=document.getElementById('reels'); if(r) r.innerHTML = arr.map(s=>'<span>'+s+'</span>').join(''); }
 function landLose(){ let a=[crand(),crand(),crand()]; if(a[0]===a[1]&&a[1]===a[2]) a[2]=SYMS[(SYMS.indexOf(a[2])+1)%SYMS.length]; return a; }
-function showScreen(id){ ['scr-entry','scr-lobby','scr-slots','scr-wheel'].forEach(s=>{ const el=document.getElementById(s); if(el) el.style.display=(s===id?'block':'none'); }); }
+function showScreen(id){ ['scr-entry','scr-lobby','scr-slots','scr-wheel','scr-mines'].forEach(s=>{ const el=document.getElementById(s); if(el) el.style.display=(s===id?'block':'none'); }); }
 function updateWallet(){ [].forEach.call(document.querySelectorAll('.walletBal'), b=>b.textContent=casinoBalance); }
 
 function openCasino(){
@@ -899,6 +929,7 @@ function showGame(game){
     const b=document.getElementById('slotsBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN'; }
   if(game==='wheel'){ buildWheel(); document.getElementById('wheelMsg').innerHTML='Land the pointer on a <b>GOLD</b> slice to win (2 of 8 = <b>1-in-4</b>). Win <b>doubles</b> your bet.';
     const b=document.getElementById('wheelBtn'); b.disabled=casinoBalance<=0; b.textContent='SPIN THE WHEEL'; }
+  if(game==='mines'){ minesArm(); }
   buildChips(game); updateWallet(); showScreen('scr-'+game);
 }
 function buildWheel(){
@@ -954,6 +985,94 @@ function casinoBurst(){ const club=document.querySelector('#casino .club');
     s.style.cssText='position:absolute;left:'+(6+Math.random()*88)+'%;top:40%;font-size:'+(16+Math.random()*22)+'px;pointer-events:none;z-index:5;transition:transform 1.2s ease-out,opacity 1.2s;';
     club.appendChild(s); requestAnimationFrame(()=>{ s.style.transform='translateY(-'+(140+Math.random()*180)+'px) rotate('+(Math.random()*360)+'deg)'; s.style.opacity='0'; });
     setTimeout(()=>s.remove(),1250); } }
+
+/* ===== Mines ===== */
+const MINES_MULTS=[1.3,2,3.3,6,13], MINES_COUNT=4, MINES_N=9;
+let minesGame=null, minesActive=false, minesWagerVal=0, minesDemo=null;
+function minesTiles(){ return document.querySelectorAll('#minesGrid .mine-tile'); }
+function minesCoverGrid(){ const g=document.getElementById('minesGrid'); g.innerHTML='';
+  for(let i=0;i<MINES_N;i++){ const t=document.createElement('div'); t.className='mine-tile dead'; t.dataset.i=i; g.appendChild(t); } }
+function minesArm(){   // fresh round, waiting for a bet
+  minesGame=null; minesActive=false; minesWagerVal=0; minesDemo=null;
+  document.getElementById('scr-mines').classList.remove('win','lose');
+  minesCoverGrid();
+  document.getElementById('minesMsg').innerHTML='4 bombs hide in 9 tiles. Reveal 💎 gems to grow your multiplier — cash out before you hit a 💣!';
+  const sb=document.getElementById('minesStartBtn'); sb.style.display=''; sb.textContent='START'; sb.disabled=casinoBalance<=0;
+  document.getElementById('minesCashBtn').style.display='none';
+  document.getElementById('minesChips').style.display=''; document.querySelector('#scr-mines .betline').style.display='';
+}
+async function minesStart(){
+  if(!casinoWager||casinoWager<=0){ alert('Pick a bet first.'); return; }
+  if(casinoWager>casinoBalance){ alert('That is more than you have.'); return; }
+  const sb=document.getElementById('minesStartBtn'); sb.disabled=true; sb.textContent='…';
+  minesWagerVal=casinoWager;
+  if(demoMode){
+    const m=[]; while(m.length<MINES_COUNT){ const r=Math.floor(Math.random()*MINES_N); if(m.indexOf(r)<0) m.push(r); }
+    minesDemo={mines:m, revealed:[]}; minesGame='demo'; casinoBalance-=minesWagerVal; updateWallet();
+  } else {
+    let res; try{ res=await api('/chores/mines/start',{kid:casinoKid, wager:minesWagerVal}); }
+    catch(e){ sb.disabled=false; sb.textContent='START'; alert(e.detail||'Casino closed.'); return; }
+    minesGame=res.game_id; casinoBalance-=minesWagerVal; updateWallet();
+  }
+  minesActive=true;
+  [].forEach.call(minesTiles(), (t,i)=>{ t.className='mine-tile'; t.textContent=''; t.onclick=()=>minesPick(i); });
+  sb.style.display='none'; document.getElementById('minesChips').style.display='none'; document.querySelector('#scr-mines .betline').style.display='none';
+  document.getElementById('minesMsg').innerHTML='Tap a tile — find 💎 gems, dodge the 💣!';
+}
+async function minesPick(i){
+  if(!minesActive) return;
+  const tile=minesTiles()[i]; if(tile.classList.contains('gem')||tile.classList.contains('boom')) return;
+  let res;
+  if(demoMode){
+    if(minesDemo.mines.indexOf(i)>=0){ res={mine:true, mines:minesDemo.mines}; }
+    else { minesDemo.revealed.push(i); const gems=minesDemo.revealed.length, mult=MINES_MULTS[Math.min(gems,MINES_MULTS.length)-1];
+      res={mine:false, gems, multiplier:mult, cashout:Math.round(minesWagerVal*mult), auto_cashout:gems>=MINES_MULTS.length}; }
+  } else { try{ res=await api('/chores/mines/pick',{game_id:minesGame, tile:i}); }catch(e){ alert(e.detail||'error'); return; } }
+  if(res.mine){
+    minesActive=false;
+    (res.mines||[]).forEach(m=>{ const t=minesTiles()[m]; t.classList.add('boom'); t.textContent='💣'; });
+    [].forEach.call(minesTiles(), t=>{ t.classList.add('dead'); t.onclick=null; });
+    document.getElementById('scr-mines').classList.add('lose');
+    document.getElementById('minesMsg').innerHTML='💥 BOOM! You lost '+minesWagerVal+' '+LED+'.';
+    document.getElementById('minesCashBtn').style.display='none';
+    minesEnd(); return;
+  }
+  tile.classList.add('gem'); tile.textContent='💎';
+  const cb=document.getElementById('minesCashBtn');
+  document.getElementById('minesMsg').innerHTML='💎 '+res.gems+' found · <b>'+res.multiplier+'×</b> — cash out or push your luck!';
+  cb.style.display=''; cb.innerHTML='💰 CASH OUT '+res.cashout+' L$';
+  if(res.auto_cashout){
+    minesActive=false;
+    casinoBalance = (!demoMode && res.new_total!=null) ? res.new_total : (casinoBalance+res.cashout);
+    updateWallet(); document.getElementById('scr-mines').classList.add('win');
+    document.getElementById('minesMsg').innerHTML='🏆 JACKPOT! Cleared the board — +'+res.cashout+' '+LED+'!';
+    casinoBurst(); cb.style.display='none'; minesEnd();
+  }
+}
+async function minesCashout(){
+  if(!minesActive) return; minesActive=false;
+  let payout;
+  if(demoMode){ const gems=minesDemo.revealed.length, mult=MINES_MULTS[Math.min(gems,MINES_MULTS.length)-1]; payout=Math.round(minesWagerVal*mult); casinoBalance+=payout; }
+  else { let res; try{ res=await api('/chores/mines/cashout',{game_id:minesGame}); }catch(e){ minesActive=true; alert(e.detail||'error'); return; }
+    payout=res.payout; casinoBalance=res.new_total!=null?res.new_total:casinoBalance+payout; }
+  updateWallet();
+  document.getElementById('scr-mines').classList.add('win');
+  document.getElementById('minesMsg').innerHTML='💰 Cashed out +'+payout+' '+LED+'!';
+  document.getElementById('minesCashBtn').style.display='none';
+  [].forEach.call(minesTiles(), t=>{ t.classList.add('dead'); t.onclick=null; });
+  casinoBurst(); minesEnd();
+}
+function minesEnd(){
+  if(!demoMode) load();
+  setTimeout(()=>{
+    document.getElementById('scr-mines').classList.remove('win','lose');
+    minesCoverGrid();
+    const sb=document.getElementById('minesStartBtn'); sb.style.display=''; sb.textContent='PLAY AGAIN'; sb.disabled=casinoBalance<=0;
+    document.getElementById('minesCashBtn').style.display='none';
+    document.getElementById('minesChips').style.display=''; buildChips('mines'); document.querySelector('#scr-mines .betline').style.display='';
+    document.getElementById('minesMsg').innerHTML='4 bombs, 9 tiles. Reveal 💎 gems, cash out before a 💣!';
+  }, 2600);
+}
 async function claim(id, kid){
   const who = kid==='ian'?'Ian':'Evan';
   const ok = await askCode({title:'🧺 '+who+'’s Code', sub:'Enter your code to <b>accept</b> this chore',
