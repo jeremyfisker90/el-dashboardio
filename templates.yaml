@@ -1,3 +1,18 @@
+# Laundry: is the washer/dryer running? Derived from its Emporia circuit power,
+# with debounce (delay_on filters standby blips; delay_off bridges the low-power
+# phases mid-cycle so a soak/tumble pause doesn't read as "done").
+- binary_sensor:
+    - name: Washer Running
+      unique_id: washer_running
+      state: "{{ states('sensor.washer_power_minute_average') | float(0) > 5 }}"
+      delay_on: "00:00:30"
+      delay_off: "00:04:00"
+    - name: Dryer Running
+      unique_id: dryer_running
+      state: "{{ states('sensor.dryer_power_minute_average') | float(0) > 30 }}"
+      delay_on: "00:00:30"
+      delay_off: "00:05:00"
+
 - sensor:
     - name: Open Doors and Windows
       unit_of_measurement: ""
@@ -64,7 +79,10 @@
       attributes:
         hours: "{{ hf['weather.forecast_home_2'].forecast[:9] }}"
 
-# Today's schedule events (for the custom color-coded day timeline)
+# Today's schedule events (for the custom color-coded day timeline).
+# Cozi now comes LIVE from sensor.cozi_live (add-on direct) instead of the
+# lagging Google Cozi-mirror calendar; Google still supplies the
+# personal (gmail) + football calendars. Re-renders whenever cozi_live updates.
 - triggers:
     - trigger: time_pattern
       minutes: "/10"
@@ -72,12 +90,13 @@
       event: start
     - trigger: event
       event_type: event_template_reloaded
+    - trigger: state
+      entity_id: sensor.cozi_live
   actions:
     - action: calendar.get_events
       target:
         entity_id:
           - calendar.parent_gmail_com
-          - calendar.the_family_cozi
           - calendar.kids_football_games
       data:
         start_date_time: "{{ today_at('00:00') }}"
@@ -89,18 +108,29 @@
       unique_id: today_schedule
       state: >
         {{ (cal['calendar.parent_gmail_com'].events | default([]) | length)
-         + (cal['calendar.the_family_cozi'].events | default([]) | length)
-         + (cal['calendar.kids_football_games'].events | default([]) | length) }}
+         + (cal['calendar.kids_football_games'].events | default([]) | length)
+         + (state_attr('sensor.cozi_live', 'events') | default([]) | length) }}
       attributes:
         events: >
           {% set ns = namespace(out=[]) %}
           {% for e in cal['calendar.parent_gmail_com'].events | default([]) %}
             {% set ns.out = ns.out + [dict(e, cal='dad')] %}
           {% endfor %}
-          {% for e in cal['calendar.the_family_cozi'].events | default([]) %}
-            {% set ns.out = ns.out + [dict(e, cal='cozi')] %}
-          {% endfor %}
           {% for e in cal['calendar.kids_football_games'].events | default([]) %}
             {% set ns.out = ns.out + [dict(e, cal='ian')] %}
           {% endfor %}
-          {{ ns.out }}
+          {% set ns.out = ns.out + (state_attr('sensor.cozi_live', 'events') | default([])) %}
+          {# dedupe events that live in both Cozi and a Google calendar (same day +
+             title); Google entries come first so their person label + official
+             schedule win, and Cozi-only appointments still come through. #}
+          {% set seen = namespace(keys=[]) %}
+          {% set final = namespace(out=[]) %}
+          {% for e in ns.out %}
+            {% set t = (e.summary | default('') | regex_replace('^\s*[A-Za-z]+:\s*', '') | lower | trim) %}
+            {% set key = (e.start | string)[:10] ~ '|' ~ t %}
+            {% if key not in seen.keys %}
+              {% set seen.keys = seen.keys + [key] %}
+              {% set final.out = final.out + [e] %}
+            {% endif %}
+          {% endfor %}
+          {{ final.out }}
