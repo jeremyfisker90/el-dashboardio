@@ -300,6 +300,9 @@
   .game-card .g-ico { font-size:40px; }
   .game-card .g-name { font-size:15px; font-weight:900; letter-spacing:.8px; }
   .game-card .g-sub { font-size:10px; font-weight:700; color:#cbd5e1; }
+  .demo-only-note { font-size:11.5px; line-height:1.4; color:#a7f3d0; margin:2px 6px 10px;
+    padding:8px 10px; border-radius:10px; background:rgba(16,185,129,.1); border:1px dashed rgba(16,185,129,.45); }
+  .demo-only-note b { color:#fde047; }
   .house-note { font-size:12px; line-height:1.4; color:#cbd5e1; margin:6px 8px 14px; }
   .house-note b { color:#fde047; }
   .rules { margin:12px 4px 14px; padding:12px 14px; border-radius:14px; text-align:left;
@@ -453,9 +456,10 @@
       <div class="games">
         <button class="game-card slots" onclick="showGame('slots')"><span class="g-ico">🎰</span><span class="g-name">SLOTS</span><span class="g-sub">match 3 to win</span></button>
         <button class="game-card wheel" onclick="showGame('wheel')"><span class="g-ico">🎡</span><span class="g-name">LUCKY WHEEL</span><span class="g-sub">land on gold</span></button>
-        <button class="game-card mines" onclick="showGame('mines')"><span class="g-ico">💣</span><span class="g-name">MINES</span><span class="g-sub">dodge the bombs</span></button>
-        <button class="game-card bj" onclick="showGame('bj')"><span class="g-ico">🃏</span><span class="g-name">BLACKJACK</span><span class="g-sub">beat the dealer</span></button>
+        <button class="game-card mines demo-only" onclick="showGame('mines')"><span class="g-ico">💣</span><span class="g-name">MINES</span><span class="g-sub">demo only</span></button>
+        <button class="game-card bj demo-only" onclick="showGame('bj')"><span class="g-ico">🃏</span><span class="g-name">BLACKJACK</span><span class="g-sub">demo only</span></button>
       </div>
+      <div class="demo-only-note" id="demoOnlyNote" style="display:none">💣 Mines &amp; 🃏 Blackjack are <b>demo only</b> — flip to Demo Mode to try them (no real POINTS).</div>
       <div class="rules">
         <div class="rules-hd">📜 HOW TO WIN</div>
         <div class="rules-body">
@@ -918,7 +922,7 @@ function enterDemo(){
   document.getElementById('lobbyWho').textContent='Demo Player';
   document.getElementById('demoBadge').style.display='inline-block';
   document.querySelector('#casino .club').classList.add('demo');
-  updateWallet(); showScreen('scr-lobby');
+  updateWallet(); updateGameCards(); showScreen('scr-lobby');
 }
 function leaveCasino(){ document.getElementById('casino').classList.remove('show'); }
 
@@ -945,9 +949,13 @@ function enterClub(){
   document.getElementById('demoBadge').style.display='none';
   document.querySelector('#casino .club').classList.remove('demo');
   document.getElementById('lobbyWho').textContent='Welcome, '+(kid==='ian'?'Ian':'Evan');
-  updateWallet(); showScreen('scr-lobby');
+  updateWallet(); updateGameCards(); showScreen('scr-lobby');
 }
-function showLobby(){ if(!demoMode) casinoBalance=(D && D.totals && D.totals[casinoKid])||casinoBalance; updateWallet(); showScreen('scr-lobby'); }
+function updateGameCards(){   // Mines & Blackjack are demo-only
+  [].forEach.call(document.querySelectorAll('.game-card.demo-only'), c=>{ c.style.display = demoMode ? '' : 'none'; });
+  const note=document.getElementById('demoOnlyNote'); if(note) note.style.display = demoMode ? 'none' : 'block';
+}
+function showLobby(){ if(!demoMode) casinoBalance=(D && D.totals && D.totals[casinoKid])||casinoBalance; updateWallet(); updateGameCards(); showScreen('scr-lobby'); }
 
 function buildChips(game){
   const opts=[5,10,20].filter(v=>v<=casinoBalance);
