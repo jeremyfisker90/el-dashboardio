@@ -146,9 +146,6 @@ SCHEDULE_RAIL = {
         "ha-card{background:%s!important;border:1px solid %s!important;"
         "border-radius:16px!important;box-shadow:%s!important;"
         "height:calc(100vh - %dpx)!important;overflow:hidden;position:relative;}"
-        "ha-card::after{content:'';position:absolute;left:1px;right:1px;bottom:1px;"
-        "height:26px;background:linear-gradient(180deg,rgba(8,12,24,0),rgba(8,12,24,0.92));"
-        "pointer-events:none;border-radius:0 0 15px 15px;}"
         % (RAIL_PCT, RAIL_PCT, TILE, bd(CYAN, "0.45"), glow(CYAN), CHROME)},
     "cards": [
         {"type": "custom:button-card", "name": "Schedule", "icon": "mdi:calendar-month",
@@ -183,12 +180,82 @@ SCHEDULE_RAIL = {
          "styles": {
              "card": [{"background": "none"}, {"box-shadow": "none"}, {"border": "none"},
                       {"padding": "0 6px 0 8px"},
-                      {"height": "calc(100vh - %dpx)" % (CHROME + 48)},
+                      {"height": "calc(100vh - %dpx)" % (CHROME + 48 + 196)},
                       {"overflow": "hidden"}, {"justify-content": "flex-start"}],
              "grid": [{"grid-template-areas": '"agenda"'}, {"align-content": "start"}],
              "custom_fields": {"agenda": [{"width": "100%"}, {"align-self": "start"}]}}},
     ],
 }
+
+
+# ----------------------------------------------------- garage footer (in rail)
+# Two buttons pinned under the calendar, one per door, showing live open/closed
+# status. Tapping opens a full-screen popup with a big animated garage door and
+# an OPEN/CLOSE control. window.garageMenu is defined once (guarded) and reused.
+# One tap on a garage button toggles that door directly — no popup. The tap is
+# handled by button-card's NATIVE tap_action (action: toggle → cover.toggle),
+# which is reliable on the touch tablet. The custom_field is purely visual and
+# is made non-interactive (pointer-events:none) so every tap reaches the card.
+def garage_btn(ent, label):
+    js = ("[[["
+          + "var s=states['%s'];var st=s?s.state:'unknown';" % ent
+          + "var open=(st==='open'||st==='opening');"
+          + "var col=open?'#f43f5e':'#22c55e';"
+          + "var txt=st==='opening'?'OPENING…':st==='closing'?'CLOSING…':open?'OPEN':'CLOSED';"
+          + "var hint=open?'tap to close':'tap to open';"
+          + "var dr=open?'<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'6\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>':"
+          + "'<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'20\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/><line x1=\\'9\\' y1=\\'25\\' x2=\\'41\\' y2=\\'25\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/><line x1=\\'9\\' y1=\\'31\\' x2=\\'41\\' y2=\\'31\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/>';"
+          + "var ico='<svg width=\\'40\\' height=\\'34\\' viewBox=\\'0 0 50 42\\' style=\\'flex:none;\\'><polygon points=\\'4,16 46,16 41,5 9,5\\' fill=\\''+col+'33\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/><rect x=\\'6\\' y=\\'16\\' width=\\'38\\' height=\\'24\\' rx=\\'2\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>'+dr+'</svg>';"
+          + "return '<div "
+          + "style=\"pointer-events:none;display:flex;align-items:center;gap:8px;height:66px;margin-bottom:8px;padding:0 9px;border-radius:14px;cursor:pointer;"
+          + "background:linear-gradient(135deg,'+col+'33,'+col+'12,rgba(8,12,24,0.86));"
+          + "border:1px solid '+col+'aa;box-shadow:0 0 14px '+col+'44;\">'"
+          + "+ico"
+          + "+'<div style=\"text-align:left;line-height:1.12;overflow:hidden;flex:1;min-width:0;\">'"
+          + "+'<div style=\"font-size:13px;font-weight:900;letter-spacing:0.3px;color:#eafcff;\">%s</div>'" % label
+          + "+'<div style=\"font-size:13px;font-weight:900;letter-spacing:1px;color:'+col+';\">● '+txt+'</div>'"
+          + "+'<div style=\"font-size:10px;font-weight:700;letter-spacing:0.5px;color:#8ea3c0;\">'+hint+'</div>'"
+          + "+'</div></div>';"
+          + "]]]")
+    return {"type": "custom:button-card", "entity": ent,
+            "show_icon": False, "show_name": False, "show_state": False,
+            # native toggle — button-card fires cover.toggle on tap (touch-safe)
+            "tap_action": {"action": "toggle"},
+            "triggers_update": [ent],
+            "custom_fields": {"b": js},
+            "styles": {
+                "card": [{"background": "none"}, {"box-shadow": "none"},
+                         {"border": "none"}, {"padding": "0"}],
+                "grid": [{"grid-template-areas": '"b"'}],
+                "custom_fields": {"b": [{"width": "100%"}]}}}
+
+
+GARAGE_HEADER = {
+    "type": "custom:button-card", "name": "Garage", "icon": "mdi:garage-variant",
+    "show_icon": True, "show_name": True, "tap_action": {"action": "none"},
+    "styles": {
+        "card": [{"background": "none"}, {"box-shadow": "none"}, {"border": "none"},
+                 {"height": "18px"}, {"padding": "2px 4px 4px"}],
+        "grid": [{"grid-template-areas": '"i n"'}, {"grid-template-columns": "20px auto"},
+                 {"justify-content": "start"}, {"align-items": "center"}, {"column-gap": "6px"}],
+        "name": [{"color": "#bff0cf"}, {"font-size": "11px"}, {"font-weight": "900"},
+                 {"letter-spacing": "2px"}, {"text-transform": "uppercase"}, {"justify-self": "start"}],
+        "icon": [{"color": GREEN}, {"--mdc-icon-size": "16px"}, {"filter": igl(GREEN)}]},
+}
+# garage gets its own defined box (green accent — distinct from the cyan
+# schedule rail above it), sitting at the bottom under the calendar.
+GARAGE_BLOCK = {
+    "type": "custom:vertical-stack-in-card",
+    "card_mod": {"style":
+        "ha-card{background:linear-gradient(180deg,rgba(34,197,94,0.12),rgba(8,12,24,0.9))!important;"
+        "border:1px solid %s!important;border-radius:14px!important;"
+        "box-shadow:%s!important;margin:6px 6px 8px 8px!important;"
+        "padding:6px 8px 4px!important;overflow:hidden;}" % (bd(GREEN, "0.55"), glow(GREEN, "0.30"))},
+    "cards": [GARAGE_HEADER,
+              garage_btn("cover.2_car_garage", "2 Car Garage"),
+              garage_btn("cover.1_car_garage", "1 Car Garage")],
+}
+SCHEDULE_RAIL["cards"].append(GARAGE_BLOCK)
 
 
 # ---------------------------------------------------------------- right side
