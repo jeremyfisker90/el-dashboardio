@@ -75,6 +75,7 @@
   .freq.daily    { background:rgba(74,222,128,.16); color:#86efac; border-color:rgba(74,222,128,.38); }
   .freq.biweekly { background:rgba(240,169,74,.16); color:#f0a94a; border-color:rgba(240,169,74,.38); }
   .freq.monthly  { background:rgba(191,131,255,.16); color:#c39bff; border-color:rgba(191,131,255,.38); }
+  .freq.twoday   { background:rgba(56,189,248,.16); color:#7dd3fc; border-color:rgba(56,189,248,.38); }
   .chore.later { opacity:.45; }
   .later .when { margin-top:8px; font-size:13px; color:#8fb0e8; font-style:italic; }
   .desc { font-size:14px; color:#aebdd6; margin-top:6px; line-height:1.35; white-space:pre-wrap; }
@@ -204,6 +205,26 @@
   .qmini .qdetail { display:none; margin-top:9px; padding-top:9px; cursor:default;
                     border-top:1px solid rgba(148,163,184,.18); }
   .qmini.open .qdetail { display:block; }
+  /* daily / short-cycle required block at the top of the job board */
+  .sub.dailysub { border-bottom-color: rgba(56,189,248,.45); }
+  .pill.daily2 { background:rgba(56,189,248,.18); color:#7dd3fc; border:1px solid rgba(56,189,248,.45); }
+  .dailynote { font-size:12px; font-weight:700; color:#9fc7dd; margin:0 0 9px;
+               background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.25);
+               border-radius:9px; padding:6px 9px; }
+
+  /* awaiting-parent-approval panel + its cards */
+  .panel.awaitp ha-card, .panel.awaitp { border-color: rgba(251,191,36,.55) !important; }
+  .panel.awaitp .phead { background:linear-gradient(90deg,rgba(251,191,36,.22),rgba(251,191,36,.05)); }
+  .awaitnote { font-size:12.5px; font-weight:700; color:#e8c88a; margin:0 0 10px;
+               background:rgba(251,191,36,.10); border:1px solid rgba(251,191,36,.35);
+               border-radius:10px; padding:7px 9px; }
+  .chore.awaitmini { background:linear-gradient(180deg,rgba(251,191,36,.13),rgba(8,12,24,.9));
+                     animation:awaitPulse 2.4s ease-in-out infinite; }
+  @keyframes awaitPulse { 0%,100%{box-shadow:0 0 0 rgba(251,191,36,0);}
+                          50%{box-shadow:0 0 14px rgba(251,191,36,.35);} }
+  .awaitstamp { font-size:11.5px; font-weight:700; color:#d9b877; margin-top:6px; }
+  .donestamp  { font-size:11px;  font-weight:700; color:#8fa3c0; margin-top:5px; letter-spacing:.2px; }
+
   /* completed-job cards under each kid's column */
   .kpanel .ksub { margin:14px 2px 8px; font-size:12.5px; font-weight:900; letter-spacing:.6px;
                   display:flex; align-items:center; gap:8px; padding-top:11px;
@@ -563,7 +584,7 @@ function choreHtml(c, locked, pending){
             + (locked ? ' locked' : '') + (c.rejected ? ' sentback' : '')
             + (pending ? ' pending' : '');
   const srcLabel = c.source === 'cozi' ? 'from Cozi' : c.source === 'sheet' ? 'from spreadsheet' : 'added here';
-  const fcls = (c.frequency||'weekly').replace('-','');
+  const fcls = freqCls(c.frequency);
   let h = '<div class="' + cls + '"><div class="top"><div class="cn">' + esc(c.name)
     + '<span class="who ' + w + '">' + whoLabel(w) + '</span>'
     + '<span class="freq ' + fcls + '">' + esc(c.frequency||'weekly').toUpperCase() + '</span></div>'
@@ -603,6 +624,12 @@ function choreHtml(c, locked, pending){
   return h;
 }
 
+// CSS class for a frequency badge. "2-day" -> "twoday" because a CSS class
+// cannot begin with a digit.
+function freqCls(f){
+  return String(f || 'weekly').replace('-','').replace(/^2day$/, 'twoday');
+}
+
 function render(){
   const t = D.target || 100, tot = D.totals || {ian:0,evan:0};
   let html = '<div class="hdr"><div class="title">⭐ Chores &amp; Points</div>'
@@ -619,16 +646,31 @@ function render(){
   const qIan  = open.filter(c=>qFor(c)==='ian');
   const qEvan = open.filter(c=>qFor(c)==='evan');
   const board = open.filter(c=>qFor(c)!=='ian' && qFor(c)!=='evan');
-  const req  = board.filter(c=>c.kind !== 'optional');
+  const reqAll = board.filter(c=>c.kind !== 'optional');
   const opt  = board.filter(c=>c.kind === 'optional');
-  const done = all.filter(c=>c.done_by);
+  // short-cycle required chores get their own block at the very top of the board.
+  // Walk the dog is pinned first, then the rest of the dailies, then the 2-day jobs.
+  const isShort = c => ['daily','2-day'].indexOf(String(c.frequency||'').toLowerCase()) >= 0;
+  const dogFirst = (a,b) => {
+    const dog = c => /walk the dog/i.test(c.name||'') ? 0 : 1;
+    if (dog(a) !== dog(b)) return dog(a) - dog(b);
+    const rank = c => String(c.frequency||'').toLowerCase() === 'daily' ? 0 : 1;
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
+    return String(a.name||'').localeCompare(String(b.name||''));
+  };
+  const daily = reqAll.filter(isShort).slice().sort(dogFirst);
+  const req   = reqAll.filter(c=>!isShort(c));
+  // finished by a kid but not yet signed off by a parent
+  const awaiting = all.filter(c=>c.done_by && !c.approved);
+  // parent-approved -> these are the ones that show in COMPLETED JOBS
+  const done = all.filter(c=>c.done_by && c.approved);
   const unlocked = !!D.optional_unlocked;
   const grid = cards => '<div class="grid">' + cards.join('') + '</div>';
 
   // compact queue card: just name + points until tapped open
   const queueCard = (c, isFix) => {
     const w = isFix ? (c.rejected && c.rejected.kid) || 'na' : (c.queued_for || 'na');
-    const fcls = (c.frequency || 'weekly').replace('-', '');
+    const fcls = freqCls(c.frequency);
     let detail = '<div class="qdetail">'
       + (c.description ? '<div class="desc">' + esc(c.description) + '</div>' : '')
       + '<div style="margin-top:6px"><span class="freq ' + fcls + '" style="margin-left:0">'
@@ -658,6 +700,31 @@ function render(){
       + detail + '</div>';
   };
 
+  // "Fri Aug 29 · 6:42 PM" from the moment the kid tapped Done
+  const stamp = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})
+         + ' · ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  };
+  const doneTime = (c) => c.done_at || (c.done_on ? c.done_on + 'T00:00:00' : null);
+
+  // waiting on a parent: kid already has the points, needs sign-off
+  const awaitCard = (c) => {
+    const col = c.done_by === 'ian' ? '#2dd4bf' : '#fbbf24';
+    const nm  = c.done_by === 'ian' ? 'Ian' : 'Evan';
+    return '<div class="chore qmini awaitmini who-' + c.done_by + '" style="border-color:' + col + '99">'
+      + '<div class="qrow"><span class="qname">' + esc(c.name) + '</span>'
+      + '<span class="donepill" style="color:' + col + ';border-color:' + col + '">' + nm + '</span>'
+      + '<span class="badge">' + c.points + ' pts</span></div>'
+      + '<div class="awaitstamp">🕒 marked done ' + esc(stamp(doneTime(c)) || 'just now') + '</div>'
+      + '<div class="claim" style="margin-top:7px">'
+      + '<button class="approve" onclick="approveChore(' + c.id + ')">Parent: Accept ✓</button>'
+      + '<button class="rejbtn" onclick="reject(' + c.id + ')">↩ Reject</button></div>'
+      + '</div>';
+  };
+
   // a finished job, shown under the kid who did it (their colour + a ✓ tag)
   const doneCard = (c) => {
     const col = c.done_by === 'ian' ? '#2dd4bf' : '#fbbf24';
@@ -667,6 +734,7 @@ function render(){
       + '<span class="qname">' + esc(c.name) + '</span>'
       + '<span class="donepill" style="color:' + col + ';border-color:' + col + '">' + nm + ' ✓</span>'
       + '<span class="badge">' + c.points + ' pts</span></div>'
+      + '<div class="donestamp">🕒 ' + esc(stamp(doneTime(c)) || '') + '</div>'
       + '<div class="claim" style="margin-top:7px">'
       + '<button class="undo" onclick="unclaim(' + c.id + ')">undo</button>'
       + '<button class="rejbtn" onclick="reject(' + c.id + ')">↩ Reject</button></div>'
@@ -679,7 +747,8 @@ function render(){
     const msg = val >= t ? '<span class="win">🎯 Target hit!</span>' : (t - val) + ' to go';
     const rej = pend.filter(c => c.rejected && c.rejected.kid === k);   // fixes sit on top
     const q = k === 'ian' ? qIan : qEvan;
-    const doneK = done.filter(c => c.done_by === k);
+    const doneK = done.filter(c => c.done_by === k)
+        .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
     const donePts = doneK.reduce((s, c) => s + (parseInt(c.points) || 0), 0);
     return '<div class="kpanel ' + k + '">'
       + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
@@ -717,10 +786,31 @@ function render(){
   // ===== two columns: board + done on the left, kid queues on the right =====
   html += '<div class="cols"><div class="colL">';
 
+  // --- AWAITING APPROVAL: sits above everything until a parent clears it ---
+  if (awaiting.length){
+    const ap = awaiting.slice()
+      .sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
+    const apPts = ap.reduce((s,c)=>s+(parseInt(c.points)||0),0);
+    html += '<div class="panel awaitp"><div class="phead">⏳ Awaiting Further Approval'
+         + '<span class="note">' + ap.length + ' waiting · ' + apPts + ' pts pending · parent code required</span>'
+         + '</div><div class="pbody">'
+         + '<div class="awaitnote">Points are already banked. A parent accepts to file it under '
+         + 'the kid’s completed jobs, or rejects to claw the points back.</div>'
+         + grid(ap.map(awaitCard))
+         + '</div></div>';
+  }
+
   // --- JOB BOARD panel: everything still up for grabs ---
   html += '<div class="panel"><div class="phead">📋 Job Board'
        + '<span class="note">' + board.length + ' open · tap a job to queue it</span></div>'
        + '<div class="pbody">';
+  if (daily.length){
+    html += '<div class="sub dailysub" style="color:#7dd3fc">⏰ DAILY REQUIRED'
+         + '<span class="pill daily2">RESETS 6AM · DO EVERY DAY</span></div>';
+    html += '<div class="dailynote">These come back on their own — dailies every '
+         + 'morning at 6am, 2-day jobs two days after they’re finished.</div>';
+    html += grid(daily.map(c => choreHtml(c, false)));
+  }
   html += '<div class="sub" style="color:#ff9a6b">REQUIRED'
        + '<span class="pill must">DO THESE FIRST</span></div>';
   html += req.length ? grid(req.map(c => choreHtml(c, false)))
@@ -748,7 +838,7 @@ function render(){
       html += grid(later.map(c => {
         const d = c.next_due ? new Date(c.next_due + 'T00:00:00') : null;
         const when = d ? d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'}) : 'later';
-        const fcls = (c.frequency||'weekly').replace('-','');
+        const fcls = freqCls(c.frequency);
         return '<div class="chore later"><div class="top"><div class="cn">' + esc(c.name)
           + '<span class="freq ' + fcls + '">' + esc(c.frequency||'weekly').toUpperCase() + '</span></div>'
           + '<div class="badge">' + c.points + ' pts</div></div>'
@@ -1234,6 +1324,18 @@ async function reject(id){
   catch(e){ alert('Could not reject: ' + (e.detail||e.status)); }
   await load();
 }
+async function approveChore(id){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const who = c.done_by === 'ian' ? 'Ian' : 'Evan';
+  const ok = await askCode({title:'✅ Parent Code',
+    sub:'Accept <b>'+esc(c.name||'this chore')+'</b> by '+who+'? It moves to '+who+'’s completed jobs.',
+    accent:'#22c55e', validate:pin=>pin===PARENT_CODE});
+  if (!ok) return;
+  try { await api('/chores/approve', {id}); }
+  catch(e){ alert('Could not accept: ' + (e.detail||e.status)); }
+  await load();
+}
+
 async function approveFix(id){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
   const kid = c.rejected && c.rejected.kid ? c.rejected.kid : null;

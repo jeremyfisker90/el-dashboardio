@@ -196,15 +196,27 @@ SCHEDULE_RAIL = {
 # handled by button-card's NATIVE tap_action (action: toggle → cover.toggle),
 # which is reliable on the touch tablet. The custom_field is purely visual and
 # is made non-interactive (pointer-events:none) so every tap reaches the card.
-def garage_btn(ent, label):
+def garage_btn(ent, label, cat=False):
+    # cat=True adds a third state: the door reads OPEN on the Alarm.com cover but
+    # input_boolean.cat_gap is on, meaning it was cracked deliberately for the
+    # cat. Shown amber with a cat, not red with an alarm.
+    catchk = ("var cg=states['input_boolean.cat_gap'];"
+              "var isCat=open&&cg&&cg.state==='on';" if cat else "var isCat=false;")
     js = ("[[["
           + "var s=states['%s'];var st=s?s.state:'unknown';" % ent
           + "var open=(st==='open'||st==='opening');"
-          + "var col=open?'#f43f5e':'#22c55e';"
-          + "var txt=st==='opening'?'OPENING…':st==='closing'?'CLOSING…':open?'OPEN':'CLOSED';"
-          + "var hint=open?'tap to close':'tap to open';"
-          + "var dr=open?'<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'6\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>':"
-          + "'<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'20\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/><line x1=\\'9\\' y1=\\'25\\' x2=\\'41\\' y2=\\'25\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/><line x1=\\'9\\' y1=\\'31\\' x2=\\'41\\' y2=\\'31\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/>';"
+          + catchk
+          + "var col=isCat?'#fbbf24':(open?'#f43f5e':'#22c55e');"
+          + "var txt=st==='opening'?'OPENING…':st==='closing'?'CLOSING…':isCat?'CAT GAP':open?'OPEN':'CLOSED';"
+          + "var hint=isCat?'cracked for the cat':open?'tap to close':'tap to open';"
+          # three door drawings: rolled up (open), cracked with a cat in the gap
+          # (cat), or fully down with panel lines (closed)
+          + "var dr;"
+          + "if(isCat){dr='<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'13\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>"
+          + "<line x1=\\'9\\' y1=\\'25\\' x2=\\'41\\' y2=\\'25\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/>"
+          + "<text x=\\'25\\' y=\\'40\\' text-anchor=\\'middle\\' font-size=\\'9\\'>\\uD83D\\uDC08</text>';}"
+          + "else if(open){dr='<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'6\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>';}"
+          + "else {dr='<rect x=\\'9\\' y=\\'19\\' width=\\'32\\' height=\\'20\\' rx=\\'1\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/><line x1=\\'9\\' y1=\\'25\\' x2=\\'41\\' y2=\\'25\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/><line x1=\\'9\\' y1=\\'31\\' x2=\\'41\\' y2=\\'31\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/>';}"
           + "var ico='<svg width=\\'40\\' height=\\'34\\' viewBox=\\'0 0 50 42\\' style=\\'flex:none;\\'><polygon points=\\'4,16 46,16 41,5 9,5\\' fill=\\''+col+'33\\' stroke=\\''+col+'\\' stroke-width=\\'1.6\\'/><rect x=\\'6\\' y=\\'16\\' width=\\'38\\' height=\\'24\\' rx=\\'2\\' fill=\\'none\\' stroke=\\''+col+'\\' stroke-width=\\'2.4\\'/>'+dr+'</svg>';"
           + "return '<div "
           + "style=\"pointer-events:none;display:flex;align-items:center;gap:8px;height:66px;margin-bottom:8px;padding:0 9px;border-radius:14px;cursor:pointer;"
@@ -221,7 +233,7 @@ def garage_btn(ent, label):
             "show_icon": False, "show_name": False, "show_state": False,
             # native toggle — button-card fires cover.toggle on tap (touch-safe)
             "tap_action": {"action": "toggle"},
-            "triggers_update": [ent],
+            "triggers_update": ([ent, "input_boolean.cat_gap"] if cat else [ent]),
             "custom_fields": {"b": js},
             "styles": {
                 "card": [{"background": "none"}, {"box-shadow": "none"},
@@ -229,6 +241,31 @@ def garage_btn(ent, label):
                 "grid": [{"grid-template-areas": '"b"'}],
                 "custom_fields": {"b": [{"width": "100%"}]}}}
 
+
+# Small toggle so the 1-car door can be flagged as "cracked for the cat"
+# instead of reading as a plain OPEN alarm. Replace this with a real position
+# sensor when one is installed — see the notes in the README.
+CAT_TOGGLE = {
+    "type": "custom:button-card", "entity": "input_boolean.cat_gap",
+    "show_icon": False, "show_name": False, "show_state": False,
+    "tap_action": {"action": "toggle"},
+    "triggers_update": ["input_boolean.cat_gap"],
+    "custom_fields": {"c": (
+        "[[["
+        "var o=states['input_boolean.cat_gap'];var on=o&&o.state==='on';"
+        "var col=on?'#fbbf24':'#64748b';"
+        "return '<div style=\"pointer-events:none;display:flex;align-items:center;justify-content:center;"
+        "gap:6px;height:30px;border-radius:10px;background:'+(on?'rgba(251,191,36,0.16)':'rgba(255,255,255,0.04)')+';"
+        "border:1px solid '+col+(on?'aa':'55')+';\">'"
+        "+'<span style=\"font-size:13px;filter:'+(on?'none':'grayscale(1) opacity(0.6)')+';\">\\uD83D\\uDC08</span>'"
+        "+'<span style=\"font-size:10px;font-weight:900;letter-spacing:1px;color:'+col+';\">'"
+        "+(on?'CAT GAP ON':'CAT GAP OFF')+'</span></div>';"
+        "]]]")},
+    "styles": {"card": [{"background": "none"}, {"box-shadow": "none"},
+                        {"border": "none"}, {"padding": "0"}],
+               "grid": [{"grid-template-areas": '"c"'}],
+               "custom_fields": {"c": [{"width": "100%"}]}},
+}
 
 GARAGE_HEADER = {
     "type": "custom:button-card", "name": "Garage", "icon": "mdi:garage-variant",
@@ -253,7 +290,7 @@ GARAGE_BLOCK = {
         "padding:6px 8px 4px!important;overflow:hidden;}" % (bd(GREEN, "0.55"), glow(GREEN, "0.30"))},
     "cards": [GARAGE_HEADER,
               garage_btn("cover.2_car_garage", "2 Car Garage"),
-              garage_btn("cover.1_car_garage", "1 Car Garage")],
+              garage_btn("cover.1_car_garage", "1 Car Garage", cat=True)],
 }
 SCHEDULE_RAIL["cards"].append(GARAGE_BLOCK)
 

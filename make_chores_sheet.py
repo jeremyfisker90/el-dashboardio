@@ -48,10 +48,35 @@ def style_header(ws, headers):
     ws.freeze_panes = "A2"
 
 
-chores = sorted(live_chores(), key=lambda c: (c.get("kind") != "required",
-                                              {"weekly": 0, "bi-weekly": 1, "monthly": 2}
-                                              .get(c.get("frequency"), 9),
-                                              c.get("name", "")))
+# The SHEET is the source of truth for frequency — a sync pushes these values
+# back into the add-on and overwrites anything set in the dashboard. So cadence
+# changes have to be made here. Matched on a lowercase substring of the name.
+FREQ_OVERRIDES = {
+    "dry mop": "2-day",        # dry sweep 1st floor: reposts 2 days after it's done
+    "walk the dog": "daily",   # reopens every morning at 6am
+}
+
+
+def _apply_freq_overrides(chores):
+    for c in chores:
+        nm = (c.get("name") or "").lower()
+        for key, freq in FREQ_OVERRIDES.items():
+            if key in nm:
+                c["frequency"] = freq
+    return chores
+
+
+def _sheet_order(c):
+    """Same order the dashboard shows: required first, short-cycle chores at the
+    top (Walk the dog pinned), then weekly -> bi-weekly -> monthly."""
+    freq = (c.get("frequency") or "").lower()
+    short = 0 if freq in ("daily", "2-day") else 1
+    dog = 0 if "walk the dog" in (c.get("name") or "").lower() else 1
+    rank = {"daily": 0, "2-day": 1, "weekly": 2, "bi-weekly": 3, "monthly": 4}.get(freq, 9)
+    return (c.get("kind") != "required", short, dog, rank, c.get("name", ""))
+
+
+chores = sorted(_apply_freq_overrides(live_chores()), key=_sheet_order)
 
 wb = openpyxl.Workbook()
 
@@ -72,10 +97,10 @@ dv_kind.prompt = ("required = has to be done before anyone can claim an optional
 ws.add_data_validation(dv_kind)
 dv_kind.add("D2:D200")
 
-dv_freq = DataValidation(type="list", formula1='"daily,weekly,bi-weekly,monthly"', allow_blank=True)
+dv_freq = DataValidation(type="list", formula1='"daily,2-day,weekly,bi-weekly,monthly"', allow_blank=True)
 dv_freq.promptTitle = "How often"
 dv_freq.prompt = ("How long before this chore comes back after it's been done.\n"
-                  "daily = every day, weekly = 7 days, bi-weekly = 14 days, monthly = 30 days.")
+                  "daily = every day (reopens 6am), 2-day = 2 days after it's done, weekly = 7 days, bi-weekly = 14 days, monthly = 30 days.")
 ws.add_data_validation(dv_freq)
 dv_freq.add("E2:E200")
 
