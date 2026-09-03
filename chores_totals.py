@@ -18,18 +18,26 @@ PLACEHOLDER = {
     "open_required": 0, "open_optional": 0,
     "done_ian": 0, "done_evan": 0, "pts_open": 0,
     "leader": "", "streak_kid": "", "streak_weeks": 0,
+    "last_kid": "", "last_ian": 0, "last_evan": 0, "last_week_start": "",
     "total_ian": 0, "total_evan": 0, "total_weeks": 1,
     "pending": 0, "queued_ian": 0, "queued_evan": 0,
 }
 
 
 def hist_stats():
-    """(streak_kid, streak_weeks, hist_ian, hist_evan, hist_weeks) from closed weeks."""
+    """Stats from CLOSED weeks only.
+
+    Returns (streak_kid, streak_weeks, hist_ian, hist_evan, hist_weeks, last).
+    `last` describes the most recently closed week, which is what the Grand
+    Champion badge shows: {kid, ian, evan, week_start}. The badge deliberately
+    reports the previous week rather than the week in progress, so the title is
+    settled rather than changing every time somebody finishes a chore.
+    """
     try:
         with urllib.request.urlopen(HIST_URL, timeout=TIMEOUT) as r:
             hist = json.loads(r.read().decode("utf-8")).get("history") or []
     except Exception:
-        return "", 0, 0, 0, 0
+        return "", 0, 0, 0, 0, {}
     hi = sum(int((h.get("totals") or {}).get("ian", 0)) for h in hist)
     he = sum(int((h.get("totals") or {}).get("evan", 0)) for h in hist)
     kid, weeks = "", 0
@@ -44,7 +52,14 @@ def hist_stats():
         if w != kid:
             break
         weeks += 1
-    return kid, weeks, hi, he, len(hist)
+    last = {}
+    if hist:
+        lt = hist[-1].get("totals") or {}
+        li, le = int(lt.get("ian", 0)), int(lt.get("evan", 0))
+        last = {"kid": "" if li == le else ("ian" if li > le else "evan"),
+                "ian": li, "evan": le,
+                "week_start": hist[-1].get("week_start") or ""}
+    return kid, weeks, hi, he, len(hist), last
 
 
 def main():
@@ -82,8 +97,12 @@ def main():
         })
         out["leader"] = ("ian" if out["ian"] > out["evan"]
                          else "evan" if out["evan"] > out["ian"] else "")
-        sk, sw, hi, he, hw = hist_stats()
+        sk, sw, hi, he, hw, last = hist_stats()
         out["streak_kid"], out["streak_weeks"] = sk, sw
+        out["last_kid"] = last.get("kid", "")
+        out["last_ian"] = int(last.get("ian", 0))
+        out["last_evan"] = int(last.get("evan", 0))
+        out["last_week_start"] = last.get("week_start", "")
         out["total_ian"] = hi + out["ian"]
         out["total_evan"] = he + out["evan"]
         out["total_weeks"] = hw + 1

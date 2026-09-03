@@ -489,12 +489,13 @@ LIFE_TILE = {
 
 CHAMP_JS = """[[[
   var a = states['sensor.chores_points'] ? states['sensor.chores_points'].attributes : null;
-  // Weekly champion. The add-on clears the points log on the Monday roll, so
-  // a.ian / a.evan are THIS WEEK only. No running grand total is shown; the
-  // recognition is winning the week, and the streak is weeks won back to back.
-  var ti = a ? (a.ian || 0) : 0, te = a ? (a.evan || 0) : 0;
+  // Grand Champion = the PREVIOUS week's winner, so the title is settled rather
+  // than flipping every time somebody finishes a chore mid-week. last_ian /
+  // last_evan are that closed week's totals; streak_weeks counts consecutive
+  // closed weeks the same kid has taken.
+  var ti = a ? (a.last_ian || 0) : 0, te = a ? (a.last_evan || 0) : 0;
   var tw = a ? (a.total_weeks || 1) : 1;
-  var champ = ti === te ? null : (ti > te ? 'ian' : 'evan');
+  var champ = a && a.last_kid ? a.last_kid : null;
   var champName = champ === 'ian' ? 'IAN' : champ === 'evan' ? 'EVAN' : 'TIED';
   var champCol = champ === 'ian' ? '#2dd4bf' : champ === 'evan' ? '#fb923c' : '#d8b4fe';
   var champPts = champ === 'evan' ? te : ti;
@@ -547,7 +548,7 @@ CHAMP_JS = """[[[
     +     champNice + ' ' + champPts + '</span>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:0 4px;">'
-    +   '<span style="font-size:11px;font-weight:800;color:#f2d98c;white-space:nowrap;letter-spacing:.4px;">WEEK ' + tw + ' LEADER</span>'
+    +   '<span style="font-size:11px;font-weight:800;color:#f2d98c;white-space:nowrap;letter-spacing:.4px;">LAST WEEK</span>'
     +   flame
     +   '<span style="font-size:12.5px;font-weight:900;color:#fbbad6;white-space:nowrap;'
     +     'text-shadow:0 0 8px rgba(244,114,182,0.7);">\\uD83C\\uDF38 ' + otherName + ' ' + otherPts + '</span>'

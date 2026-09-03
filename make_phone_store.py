@@ -81,15 +81,17 @@ CHORES_SUMMARY_JS = """[[[
   var ian = +a.ian||0, evan = +a.evan||0;
   // Weekly champion only. The add-on wipes the points log on the Monday roll,
   // so a.ian / a.evan are this week's score. Streak = weeks won back to back.
-  var ti = +a.ian||0, te = +a.evan||0, tw = +a.total_weeks||1;
+  // Grand Champion = previous week's winner (settled), not the live leader.
+  var ti = +a.last_ian||0, te = +a.last_evan||0, tw = +a.total_weeks||1;
   var strk = +a.streak_weeks||0, strkKid = a.streak_kid||'';
+  var lastKid = a.last_kid||'';
   var qi = +a.queued_ian||0, qe = +a.queued_evan||0;
   var di = +a.done_ian||0, de = +a.done_evan||0;
   var avail = (+a.open_required||0) + (+a.open_optional||0);
   var pts = +a.pts_open||0, reqLeft = +a.required_left||0;
   var unlocked = a.optional_unlocked;
-  var champ = ti===te ? 'Neck & Neck' : (ti>te ? 'Ian' : 'Evan');
-  var champCol = ti===te ? '#e5e7eb' : (ti>te ? '#2dd4bf' : '#fbbf24');
+  var champ = !lastKid ? 'No champion yet' : (lastKid==='ian' ? 'Ian' : 'Evan');
+  var champCol = !lastKid ? '#e5e7eb' : (lastKid==='ian' ? '#2dd4bf' : '#fbbf24');
   var wLead = ian===evan ? '' : (ian>evan ? 'ian' : 'evan');
   var TEAL='#2dd4bf', GOLD='#fbbf24';
   function kid(name, col, score, q, done, lead){
@@ -108,8 +110,8 @@ CHORES_SUMMARY_JS = """[[[
     + '<div style="text-align:center;">'
     +   '<div style="font-size:13px;font-weight:900;letter-spacing:2.5px;color:#fde047;text-shadow:0 0 10px rgba(250,204,21,0.75);">🏆 GRAND CHAMPION</div>'
     +   '<div style="font-size:32px;font-weight:900;color:'+champCol+';text-shadow:0 0 18px '+champCol+';font-family:Cinzel,serif;line-height:1.1;">'+champ+'</div>'
-    +   '<div style="font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;">week '+tw+' · Ian '+ti+' · Evan '+te
-    +     ((strk>1 && strkKid && ti!==te && ((ti>te?'ian':'evan')===strkKid)) ? ' · 🔥 '+strk+'w streak' : '')+'</div>'
+    +   '<div style="font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;">last week · Ian '+ti+' · Evan '+te
+    +     ((strk>1 && lastKid && lastKid===strkKid) ? ' · 🔥 '+strk+'w streak' : '')+'</div>'
     + '</div>'
     + '<div style="display:flex;gap:11px;">'+kid('IAN',TEAL,ian,qi,di,wLead==='ian')+kid('EVAN',GOLD,evan,qe,de,wLead==='evan')+'</div>'
     + '<div>'
