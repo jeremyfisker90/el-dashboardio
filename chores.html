@@ -205,6 +205,45 @@
   .qmini .qdetail { display:none; margin-top:9px; padding-top:9px; cursor:default;
                     border-top:1px solid rgba(148,163,184,.18); }
   .qmini.open .qdetail { display:block; }
+  /* ---- filter-by-points bar + its popup ---- */
+  .ptbar { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin:0 0 12px;
+           padding:9px 10px; border-radius:12px; background:rgba(168,85,247,.09);
+           border:1px solid rgba(168,85,247,.32); }
+  .ptbar-lbl { font-size:11px; font-weight:900; letter-spacing:1.4px; color:#c9a6f5;
+               margin-right:3px; }
+  .ptbtn { position:relative; min-width:52px; padding:8px 12px; cursor:pointer;
+           font-size:15px; font-weight:900; color:#f3e8ff; border-radius:10px;
+           background:linear-gradient(180deg,rgba(168,85,247,.30),rgba(168,85,247,.10));
+           border:1px solid rgba(168,85,247,.55); transition:transform .08s, box-shadow .15s; }
+  .ptbtn:hover { box-shadow:0 0 14px rgba(168,85,247,.45); }
+  .ptbtn:active { transform:translateY(1px); }
+  .ptbtn.all { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.22); color:#dbe6f5; }
+  .ptbtn .ptn { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:8px;
+                font-size:11px; font-weight:800; background:rgba(0,0,0,.35); color:#e9d5ff; }
+
+  .ptbox { max-width:640px; width:min(92vw,640px); }
+  .ptlist { max-height:min(62vh,520px); overflow-y:auto; text-align:left; margin-top:10px;
+            padding-right:4px; }
+  .ptlist::-webkit-scrollbar { width:6px; }
+  .ptlist::-webkit-scrollbar-thumb { background:rgba(168,85,247,.4); border-radius:3px; }
+  .ptrow { display:flex; align-items:center; gap:10px; padding:9px 11px; margin-bottom:8px;
+           border-radius:12px; background:rgba(8,12,24,.72); border:1px solid rgba(255,255,255,.10);
+           border-left-width:4px; }
+  .ptrow.who-ian  { border-left-color:#2dd4bf; }
+  .ptrow.who-evan { border-left-color:#fbbf24; }
+  .ptrow.who-na   { border-left-color:rgba(255,255,255,.22); }
+  .ptrow-main { flex:1; min-width:0; }
+  .ptrow-name { font-size:14px; font-weight:800; color:#f2f6ff; line-height:1.25; }
+  .ptrow-meta { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:5px; }
+  .ptrow-where { font-size:11px; font-weight:700; color:#93a7c4; }
+  .ptrow-pts { flex:none; min-width:44px; text-align:center; font-size:19px; font-weight:900;
+               color:#e9d5ff; text-shadow:0 0 10px rgba(168,85,247,.7); }
+  .ptrow-act { flex:none; display:flex; gap:5px; }
+  .ptrow-act button { padding:7px 11px; border-radius:9px; font-size:12px; font-weight:900;
+                      cursor:pointer; border:none; color:#06121f; }
+  .ptrow-act .ian  { background:#2dd4bf; }
+  .ptrow-act .evan { background:#fbbf24; }
+
   /* daily / short-cycle required block at the top of the job board */
   .sub.dailysub { border-bottom-color: rgba(56,189,248,.45); }
   .pill.daily2 { background:rgba(56,189,248,.18); color:#7dd3fc; border:1px solid rgba(56,189,248,.45); }
@@ -446,6 +485,16 @@
 <div id="app"><div id="msg">Loading chores…</div></div>
 
 <!-- Shared keypad for every code prompt (claim / reject / parent actions) -->
+<!-- Filter the job board by point value -->
+<div id="ptfilter" class="casino-ov" onclick="if(event.target===this)closePts()">
+  <div class="club ptbox">
+    <button class="club-x" onclick="closePts()">✕</button>
+    <div class="club-sign small" id="ptTitle">⭐ CHORES</div>
+    <div class="entry-msg" id="ptSub"></div>
+    <div id="ptList" class="ptlist"></div>
+  </div>
+</div>
+
 <div id="codepad" class="casino-ov" onclick="if(event.target===this)codepadCancel()">
   <div class="club codepad-box">
     <button class="club-x" onclick="codepadCancel()">✕</button>
@@ -626,6 +675,48 @@ function choreHtml(c, locked, pending){
 
 // CSS class for a frequency badge. "2-day" -> "twoday" because a CSS class
 // cannot begin with a digit.
+// ===== filter the job board by point value =====
+function closePts(){ document.getElementById('ptfilter').classList.remove('show'); }
+
+function showPts(pts){
+  const all = (D.chores || []).filter(c => c.posted !== false && !c.done_by);
+  const list = (pts < 0 ? all : all.filter(c => (parseInt(c.points)||0) === pts))
+    .slice().sort((a,b) => (parseInt(b.points)||0) - (parseInt(a.points)||0)
+                        || String(a.name||'').localeCompare(String(b.name||'')));
+  const totalPts = list.reduce((s,c) => s + (parseInt(c.points)||0), 0);
+
+  document.getElementById('ptTitle').innerHTML =
+    (pts < 0 ? '⭐ EVERY OPEN JOB' : '⭐ ' + pts + ' ' + LED + ' JOBS');
+  document.getElementById('ptSub').innerHTML =
+    list.length ? (list.length + ' job' + (list.length === 1 ? '' : 's')
+                   + ' · ' + totalPts + ' points on the table')
+                : 'Nothing on the board at that value right now.';
+
+  document.getElementById('ptList').innerHTML = list.map(c => {
+    const q = c.queued_for || 'na';
+    const where = q === 'ian' ? 'In Ian’s queue'
+                : q === 'evan' ? 'In Evan’s queue' : 'On the board';
+    return '<div class="ptrow who-' + q + '">'
+      + '<div class="ptrow-main">'
+      +   '<div class="ptrow-name">' + esc(c.name) + '</div>'
+      +   '<div class="ptrow-meta">'
+      +     '<span class="freq ' + freqCls(c.frequency) + '">'
+      +       esc(c.frequency || 'weekly').toUpperCase() + '</span>'
+      +     '<span class="ptrow-where">' + where + '</span>'
+      +     (c.kind === 'optional' ? '<span class="pill open">OPTIONAL</span>'
+                                   : '<span class="pill must">REQUIRED</span>')
+      +   '</div>'
+      + '</div>'
+      + '<div class="ptrow-pts">' + (parseInt(c.points)||0) + '</div>'
+      + '<div class="ptrow-act">'
+      +   '<button class="ian"  onclick="queueChore(' + c.id + ',&#39;ian&#39;); closePts();">Ian</button>'
+      +   '<button class="evan" onclick="queueChore(' + c.id + ',&#39;evan&#39;); closePts();">Evan</button>'
+      + '</div></div>';
+  }).join('') || '<div class="empty">Nothing here.</div>';
+
+  document.getElementById('ptfilter').classList.add('show');
+}
+
 function freqCls(f){
   return String(f || 'weekly').replace('-','').replace(/^2day$/, 'twoday');
 }
@@ -804,6 +895,19 @@ function render(){
   html += '<div class="panel"><div class="phead">📋 Job Board'
        + '<span class="note">' + board.length + ' open · tap a job to queue it</span></div>'
        + '<div class="pbody">';
+
+  // --- filter by point value: one button per value that's actually on the board
+  {
+    const vals = {};
+    board.forEach(c => { const p = parseInt(c.points) || 0; vals[p] = (vals[p] || 0) + 1; });
+    const keys = Object.keys(vals).map(Number).sort((a,b) => a - b);
+    if (keys.length){
+      html += '<div class="ptbar"><span class="ptbar-lbl">FILTER BY POINTS</span>'
+           +  keys.map(p => '<button class="ptbtn" onclick="showPts(' + p + ')">'
+                + p + '<span class="ptn">' + vals[p] + '</span></button>').join('')
+           +  '<button class="ptbtn all" onclick="showPts(-1)">All</button></div>';
+    }
+  }
   if (daily.length){
     html += '<div class="sub dailysub" style="color:#7dd3fc">⏰ DAILY REQUIRED'
          + '<span class="pill daily2">RESETS 6AM · DO EVERY DAY</span></div>';

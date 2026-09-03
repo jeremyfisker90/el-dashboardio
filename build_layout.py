@@ -489,7 +489,10 @@ LIFE_TILE = {
 
 CHAMP_JS = """[[[
   var a = states['sensor.chores_points'] ? states['sensor.chores_points'].attributes : null;
-  var ti = a ? (a.total_ian || 0) : 0, te = a ? (a.total_evan || 0) : 0;
+  // Weekly champion. The add-on clears the points log on the Monday roll, so
+  // a.ian / a.evan are THIS WEEK only. No running grand total is shown; the
+  // recognition is winning the week, and the streak is weeks won back to back.
+  var ti = a ? (a.ian || 0) : 0, te = a ? (a.evan || 0) : 0;
   var tw = a ? (a.total_weeks || 1) : 1;
   var champ = ti === te ? null : (ti > te ? 'ian' : 'evan');
   var champName = champ === 'ian' ? 'IAN' : champ === 'evan' ? 'EVAN' : 'TIED';
@@ -544,7 +547,7 @@ CHAMP_JS = """[[[
     +     champNice + ' ' + champPts + '</span>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:0 4px;">'
-    +   '<span style="font-size:11px;font-weight:800;color:#f2d98c;white-space:nowrap;letter-spacing:.4px;">WEEK ' + tw + '</span>'
+    +   '<span style="font-size:11px;font-weight:800;color:#f2d98c;white-space:nowrap;letter-spacing:.4px;">WEEK ' + tw + ' LEADER</span>'
     +   flame
     +   '<span style="font-size:12.5px;font-weight:900;color:#fbbad6;white-space:nowrap;'
     +     'text-shadow:0 0 8px rgba(244,114,182,0.7);">\\uD83C\\uDF38 ' + otherName + ' ' + otherPts + '</span>'

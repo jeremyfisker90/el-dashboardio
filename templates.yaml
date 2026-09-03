@@ -93,33 +93,47 @@
     - trigger: state
       entity_id: sensor.cozi_live
   actions:
-    - action: calendar.get_events
-      target:
-        entity_id:
-          - calendar.parent_gmail_com
-          - calendar.kids_football_games
-      data:
-        start_date_time: "{{ today_at('00:00') }}"
-        duration:
-          days: 14
-      response_variable: cal
+    # Only call the calendar service when Google is actually alive. When that
+    # integration needs reauth its entities go unavailable AND calendar.get_events
+    # stops existing, which used to abort this whole template and freeze the rail
+    # on stale data. Skipping the call leaves `cal` undefined; the templates below
+    # default it, so Cozi events still render on their own.
+    - if:
+        - condition: template
+          value_template: >
+            {{ states('calendar.parent_gmail_com') not in
+               ['unavailable', 'unknown', 'none'] }}
+      then:
+        - action: calendar.get_events
+          continue_on_error: true
+          target:
+            entity_id:
+              - calendar.parent_gmail_com
+              - calendar.kids_football_games
+          data:
+            start_date_time: "{{ today_at('00:00') }}"
+            duration:
+              days: 14
+          response_variable: cal
   sensor:
     - name: Today Schedule
       unique_id: today_schedule
       state: >
-        {{ (cal['calendar.parent_gmail_com'].events | default([]) | length)
-         + (cal['calendar.kids_football_games'].events | default([]) | length)
-         + (state_attr('sensor.cozi_live', 'events') | default([]) | length) }}
+        {% set cal = cal | default({}, true) %}
+        {{ (cal.get('calendar.parent_gmail_com', {}).get('events', []) | length)
+         + (cal.get('calendar.kids_football_games', {}).get('events', []) | length)
+         + (state_attr('sensor.cozi_live', 'events') | default([], true) | length) }}
       attributes:
         events: >
+          {% set cal = cal | default({}, true) %}
           {% set ns = namespace(out=[]) %}
-          {% for e in cal['calendar.parent_gmail_com'].events | default([]) %}
+          {% for e in cal.get('calendar.parent_gmail_com', {}).get('events', []) %}
             {% set ns.out = ns.out + [dict(e, cal='dad')] %}
           {% endfor %}
-          {% for e in cal['calendar.kids_football_games'].events | default([]) %}
+          {% for e in cal.get('calendar.kids_football_games', {}).get('events', []) %}
             {% set ns.out = ns.out + [dict(e, cal='ian')] %}
           {% endfor %}
-          {% set ns.out = ns.out + (state_attr('sensor.cozi_live', 'events') | default([])) %}
+          {% set ns.out = ns.out + (state_attr('sensor.cozi_live', 'events') | default([], true)) %}
           {# dedupe events that live in both Cozi and a Google calendar (same day +
              title); Google entries come first so their person label + official
              schedule win, and Cozi-only appointments still come through. #}
