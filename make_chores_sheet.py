@@ -52,8 +52,9 @@ def style_header(ws, headers):
 # back into the add-on and overwrites anything set in the dashboard. So cadence
 # changes have to be made here. Matched on a lowercase substring of the name.
 FREQ_OVERRIDES = {
-    "dry mop": "2-day",        # dry sweep 1st floor: reposts 2 days after it's done
-    "walk the dog": "daily",   # reopens every morning at 6am
+    "dry mop": "2-day",           # dry sweep 1st floor: reposts 2 days after it's done
+    "walk the dog": "daily",      # reopens every morning at 6am
+    "shared bathroom": "weekly",  # was bi-weekly
 }
 
 

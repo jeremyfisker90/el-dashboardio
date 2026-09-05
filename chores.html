@@ -251,6 +251,18 @@
                background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.25);
                border-radius:9px; padding:6px 9px; }
 
+  /* parent queue: purple, distinct from Ian teal / Evan amber */
+  .kpanel.parentq { border-color: rgba(168,85,247,.55); }
+  .kpanel.parentq .khead { background:linear-gradient(90deg,rgba(168,85,247,.26),rgba(168,85,247,.05)); }
+  .kpanel.parentq .kname { color:#d8b4fe; }
+  .ksub.donesub.parentq { color:#d8b4fe; border-bottom-color:rgba(168,85,247,.45); }
+  .claim .toparent { background:rgba(168,85,247,.16); color:#d8b4fe; border:1px solid rgba(168,85,247,.6);
+                     border-radius:9px; padding:7px 11px; font-size:12.5px; font-weight:800; cursor:pointer; }
+  .claim .toparent:hover { box-shadow:0 0 12px rgba(168,85,247,.45); }
+  .claim .parent { background:#a855f7; color:#12061f; border:none; border-radius:9px;
+                   padding:8px 13px; font-size:13px; font-weight:900; cursor:pointer;
+                   box-shadow:0 0 12px rgba(168,85,247,.5); }
+
   /* awaiting-parent-approval panel + its cards */
   .panel.awaitp ha-card, .panel.awaitp { border-color: rgba(251,191,36,.55) !important; }
   .panel.awaitp .phead { background:linear-gradient(90deg,rgba(251,191,36,.22),rgba(251,191,36,.05)); }
@@ -652,6 +664,11 @@ function choreHtml(c, locked, pending){
   } else if (locked){
     h += '<div class="lockmsg">🔒 Locked until all required chores are done ('
        + D.required_left + ' left)</div>';
+  } else if (q === 'parent'){
+    // parents finish their own jobs: no approval step, no points banked
+    h += '<div class="claim">'
+      + '<button class="parent" onclick="parentDone(' + c.id + ')">Parent: Done ✓</button>'
+      + '<button class="release" onclick="queueChore(' + c.id + ',&#39;na&#39;)">↩ Board</button></div>';
   } else if (q === 'ian' || q === 'evan'){
     // card lives in a kid's queue: finish it (code) or put it back on the board
     h += '<div class="claim">'
@@ -662,7 +679,8 @@ function choreHtml(c, locked, pending){
     // open job: grab it into your queue (no code needed to queue)
     h += '<div class="claim">'
       + '<button class="toian" onclick="queueChore(' + c.id + ',\'ian\')">→ Ian\'s queue</button>'
-      + '<button class="toevan" onclick="queueChore(' + c.id + ',\'evan\')">→ Evan\'s queue</button></div>';
+      + '<button class="toevan" onclick="queueChore(' + c.id + ',\'evan\')">→ Evan\'s queue</button>'
+      + '<button class="toparent" onclick="queueChore(' + c.id + ',&#39;parent&#39;)">→ Parent queue</button></div>';
   }
   h += '<div style="margin-top:8px;text-align:right"><span class="src">' + srcLabel + '</span> &nbsp; '
     + (pending ? '' : '<button class="btn ghost" style="padding:5px 10px;font-size:12px;color:#fbbf24;border-color:rgba(251,191,36,.5)" '
@@ -736,7 +754,8 @@ function render(){
   const qFor = c => c.queued_for || 'na';
   const qIan  = open.filter(c=>qFor(c)==='ian');
   const qEvan = open.filter(c=>qFor(c)==='evan');
-  const board = open.filter(c=>qFor(c)!=='ian' && qFor(c)!=='evan');
+  const qParent = open.filter(c=>qFor(c)==='parent');
+  const board = open.filter(c=>['ian','evan','parent'].indexOf(qFor(c)) < 0);
   const reqAll = board.filter(c=>c.kind !== 'optional');
   const opt  = board.filter(c=>c.kind === 'optional');
   // short-cycle required chores get their own block at the very top of the board.
@@ -803,8 +822,8 @@ function render(){
 
   // waiting on a parent: kid already has the points, needs sign-off
   const awaitCard = (c) => {
-    const col = c.done_by === 'ian' ? '#2dd4bf' : '#fbbf24';
-    const nm  = c.done_by === 'ian' ? 'Ian' : 'Evan';
+    const col = c.done_by === 'ian' ? '#2dd4bf' : c.done_by === 'parent' ? '#a855f7' : '#fbbf24';
+    const nm  = c.done_by === 'ian' ? 'Ian' : c.done_by === 'parent' ? 'Parent' : 'Evan';
     return '<div class="chore qmini awaitmini who-' + c.done_by + '" style="border-color:' + col + '99">'
       + '<div class="qrow"><span class="qname">' + esc(c.name) + '</span>'
       + '<span class="donepill" style="color:' + col + ';border-color:' + col + '">' + nm + '</span>'
@@ -858,6 +877,28 @@ function render(){
           ? '<div class="ksub donesub ' + k + '">✅ COMPLETED JOBS'
             + '<span class="kcount">' + doneK.length + ' done · ' + donePts + ' pts</span></div>'
             + doneK.map(doneCard).join('')
+          : '')
+      + '</div></div>';
+  };
+
+  // Parents get a queue too. No points, no target bar, no approval step:
+  // a parent marking a job done books it straight to completed.
+  const parentPanel = () => {
+    const q = qParent;
+    const doneP = done.filter(c => c.done_by === 'parent')
+        .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
+    if (!q.length && !doneP.length) return '';
+    return '<div class="kpanel parentq">'
+      + '<div class="khead"><span class="kname">🧹 PARENT QUEUE</span>'
+      + '<span class="qcount">' + q.length + ' IN QUEUE'
+      + (doneP.length ? ' · ' + doneP.length + ' DONE' : '') + '</span></div>'
+      + '<div class="kbody">'
+      + q.map(c => queueCard(c, false)).join('')
+      + (!q.length ? '<div class="empty">Nothing queued for the parents.</div>' : '')
+      + (doneP.length
+          ? '<div class="ksub donesub parentq">✅ COMPLETED BY PARENTS'
+            + '<span class="kcount">' + doneP.length + ' done</span></div>'
+            + doneP.map(doneCard).join('')
           : '')
       + '</div></div>';
   };
@@ -956,6 +997,7 @@ function render(){
   html += '</div><div class="colR">'
        + kidPanel('ian', 'Ian')
        + kidPanel('evan', 'Evan')
+       + parentPanel()
        + '</div></div>';
 
   html += '<div class="foot">'
@@ -1428,6 +1470,17 @@ async function reject(id){
   catch(e){ alert('Could not reject: ' + (e.detail||e.status)); }
   await load();
 }
+async function parentDone(id){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const ok = await askCode({title:'🧹 Parent Code',
+    sub:'Mark <b>'+esc(c.name||'this chore')+'</b> done by a parent? No approval needed, no points banked.',
+    accent:'#a855f7', validate:pin=>pin===PARENT_CODE});
+  if (!ok) return;
+  try { await api('/chores/parent_done', {id}); }
+  catch(e){ alert('Could not complete: ' + (e.detail||e.status)); }
+  await load();
+}
+
 async function approveChore(id){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
   const who = c.done_by === 'ian' ? 'Ian' : 'Evan';
