@@ -263,6 +263,16 @@
                    padding:8px 13px; font-size:13px; font-weight:900; cursor:pointer;
                    box-shadow:0 0 12px rgba(168,85,247,.5); }
 
+  /* reassign a sent-back chore to someone else, or back to the board */
+  .reassign { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:7px;
+              font-size:11px; font-weight:800; letter-spacing:.6px; color:#8ea3c0; }
+  .ra { padding:5px 10px; border-radius:9px; font-size:11.5px; font-weight:900;
+        cursor:pointer; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
+        color:#dbe6f5; }
+  .ra.ian:hover   { border-color:#2dd4bf; color:#5eead4; box-shadow:0 0 10px rgba(45,212,191,.35); }
+  .ra.evan:hover  { border-color:#fbbf24; color:#fcd34d; box-shadow:0 0 10px rgba(251,191,36,.35); }
+  .ra.board:hover { border-color:#38bdf8; color:#7dd3fc; box-shadow:0 0 10px rgba(56,189,248,.35); }
+
   /* awaiting-parent-approval panel + its cards */
   .panel.awaitp ha-card, .panel.awaitp { border-color: rgba(251,191,36,.55) !important; }
   .panel.awaitp .phead { background:linear-gradient(90deg,rgba(251,191,36,.22),rgba(251,191,36,.05)); }
@@ -660,7 +670,12 @@ function choreHtml(c, locked, pending){
   const q = c.queued_for || 'na';
   if (pending){
     h += '<div class="claim">'
-      + '<button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>';
+      + '<button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>'
+      + '<div class="reassign">Reassign: '
+        + '<button class="ra ian"  onclick="reassign(' + c.id + ',&#39;ian&#39;)">Ian</button>'
+        + '<button class="ra evan" onclick="reassign(' + c.id + ',&#39;evan&#39;)">Evan</button>'
+        + '<button class="ra board" onclick="reassign(' + c.id + ',&#39;na&#39;)">↩ Board</button>'
+        + '</div>';
   } else if (locked){
     h += '<div class="lockmsg">🔒 Locked until all required chores are done ('
        + D.required_left + ' left)</div>';
@@ -791,7 +806,12 @@ function render(){
         + (w === 'ian' ? 'IAN' : 'EVAN') + ' LOST ' + c.points + ' PTS</div>'
         + (c.rejected && c.rejected.comment ? '<div class="c">"' + esc(c.rejected.comment) + '"</div>' : '')
         + '</div>'
-        + '<div class="claim"><button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>';
+        + '<div class="claim"><button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>'
+        + '<div class="reassign">Reassign: '
+        + '<button class="ra ian"  onclick="reassign(' + c.id + ',&#39;ian&#39;)">Ian</button>'
+        + '<button class="ra evan" onclick="reassign(' + c.id + ',&#39;evan&#39;)">Evan</button>'
+        + '<button class="ra board" onclick="reassign(' + c.id + ',&#39;na&#39;)">↩ Board</button>'
+        + '</div>';
     } else {
       detail += '<div class="claim">'
         + (w === 'parent'
@@ -1505,6 +1525,19 @@ async function approveChore(id){
   if (!ok) return;
   try { await api('/chores/approve', {id}); }
   catch(e){ alert('Could not accept: ' + (e.detail||e.status)); }
+  await load();
+}
+
+async function reassign(id, to){
+  const c = (D.chores||[]).find(x=>x.id===id) || {};
+  const label = to === 'ian' ? 'Ian' : to === 'evan' ? 'Evan' : 'the open board';
+  const ok = await askCode({title:'⇄ Parent Code',
+    sub:'Reassign <b>'+esc(c.name||'this chore')+'</b> to <b>'+label+'</b>? '
+        +'The send-back note is cleared and it becomes a normal job again.',
+    accent:'#38bdf8', validate:pin=>pin===PARENT_CODE});
+  if (!ok) return;
+  try { await api('/chores/reassign', {id, to}); }
+  catch(e){ alert('Could not reassign: ' + (e.detail||e.status)); }
   await load();
 }
 
