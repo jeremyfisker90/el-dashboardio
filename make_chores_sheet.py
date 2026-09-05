@@ -22,6 +22,24 @@ API = "http://192.168.1.226:5000/chores"
 HEADERS = ["Chore Title", "Points", "Chore Steps/Details",
            "Type (Required / Optional)", "Frequency"]
 NAVY, STEEL, INK = "1B2A4A", "4A78D6", "222222"
+BAND, GREEN, AMBER, GREY = "EEF3FC", "1E7F4C", "B26B00", "6B7A95"
+# The published-sheet URL is a secret (it exposes the whole workbook), so it is
+# never hardcoded here. It is read from the add-on, which already stores it.
+MEALS_CSV = ""
+TRACKER_API = "http://192.168.1.226:5000/meals/tracker"
+
+
+def _band(ws, first_row, last_row, ncols):
+    """Zebra striping + thin borders, so long lists stay readable."""
+    from openpyxl.styles import Border, Side
+    edge = Side(style="thin", color="D5DEEC")
+    box = Border(left=edge, right=edge, top=edge, bottom=edge)
+    for r in range(first_row, last_row + 1):
+        for cidx in range(1, ncols + 1):
+            cell = ws.cell(row=r, column=cidx)
+            cell.border = box
+            if r % 2 == 0:
+                cell.fill = PatternFill("solid", fgColor=BAND)
 
 
 def live_chores():
@@ -34,6 +52,56 @@ def live_chores():
         return json.loads(raw).get("chores") or []
     except Exception as exc:
         print("could not reach the chores API (%s); writing headers only" % exc)
+        return []
+
+
+def _meals_url():
+    """Ask the add-on for the published Meals CSV rather than storing it here."""
+    try:
+        raw = subprocess.check_output([
+            "ssh", "-i", os.path.join(HERE, "keys", "id_ha"),
+            "-o", "StrictHostKeyChecking=no", "root@192.168.1.226",
+            "curl -s -m 20 http://192.168.1.226:5000/meals"], text=True,
+            encoding="utf-8", timeout=60)
+        return json.loads(raw).get("source_url") or ""
+    except Exception:
+        return ""
+
+
+def live_meals():
+    """The approved meal list, straight off the published Meals tab."""
+    import csv as _csv
+    import urllib.request
+    url = MEALS_CSV or _meals_url()
+    if not url:
+        print("no meals URL available; skipping the Meals tab")
+        return []
+    try:
+        raw = urllib.request.urlopen(url, timeout=25).read().decode("utf-8", "replace")
+        rows = [r for r in _csv.reader(raw.splitlines()) if any(x.strip() for x in r)]
+        out = []
+        for r in rows[1:]:
+            name = (r[0] if r else "").strip()
+            if not name:
+                continue
+            out.append({"name": name,
+                        "pre": (r[1] if len(r) > 1 else "").strip(),
+                        "last": (r[2] if len(r) > 2 else "").strip()})
+        return sorted(out, key=lambda m: m["name"].lower())
+    except Exception as exc:
+        print("could not read the Meals tab (%s)" % exc)
+        return []
+
+
+def live_tracker():
+    try:
+        raw = subprocess.check_output([
+            "ssh", "-i", os.path.join(HERE, "keys", "id_ha"),
+            "-o", "StrictHostKeyChecking=no", "root@192.168.1.226",
+            "curl -s -m 20 %s" % TRACKER_API], text=True, encoding="utf-8", timeout=60)
+        return json.loads(raw).get("tracker") or []
+    except Exception as exc:
+        print("could not read the tracker (%s)" % exc)
         return []
 
 
@@ -108,10 +176,24 @@ dv_freq.add("E2:E200")
 for col, w in {"A": 36, "B": 9, "C": 74, "D": 20, "E": 14}.items():
     ws.column_dimensions[col].width = w
 for row in ws.iter_rows(min_row=2, max_row=ws.max_row, max_col=5):
-    row[1].alignment = Alignment(horizontal="center")
+    row[0].alignment = Alignment(vertical="center", wrap_text=True)
+    row[1].alignment = Alignment(horizontal="center", vertical="center")
     row[2].alignment = Alignment(wrap_text=True, vertical="top")
-    row[3].alignment = Alignment(horizontal="center")
-    row[4].alignment = Alignment(horizontal="center")
+    row[3].alignment = Alignment(horizontal="center", vertical="center")
+    row[4].alignment = Alignment(horizontal="center", vertical="center")
+    row[0].font = Font(bold=True, size=11)
+    # colour-code the cadence so the short-cycle jobs stand out at a glance
+    freq = str(row[4].value or "").lower()
+    if freq in ("daily", "2-day"):
+        row[4].font = Font(bold=True, color=GREEN, size=11)
+    elif freq in ("bi-weekly", "monthly"):
+        row[4].font = Font(color=AMBER, size=11)
+    if str(row[3].value or "").lower().startswith("req"):
+        row[3].font = Font(bold=True, color=NAVY, size=11)
+    else:
+        row[3].font = Font(color=GREY, size=11)
+_band(ws, 2, ws.max_row, 5)
+ws.auto_filter.ref = "A1:E%d" % ws.max_row
 
 # ---------------------------------------------------------------- Rotation tab
 rot = wb.create_sheet("Rotation")
@@ -123,12 +205,70 @@ for col, w in {"A": 36, "B": 14, "C": 16, "D": 20}.items():
     rot.column_dimensions[col].width = w
 for row in rot.iter_rows(min_row=2, max_row=rot.max_row, max_col=4):
     for cell in row[1:]:
-        cell.alignment = Alignment(horizontal="center")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+_band(rot, 2, rot.max_row, 4)
+rot.auto_filter.ref = "A1:D%d" % rot.max_row
 
 note = rot.cell(row=rot.max_row + 2, column=1,
                 value="Read-only snapshot. The dashboard tracks these dates live as the "
                       "boys claim chores — it can't write back into this sheet.")
 note.font = Font(italic=True, color="777777", size=10)
+
+# ---------------------------------------------------------------- Meals tab
+meals = live_meals()
+ml = wb.create_sheet("Meals")
+style_header(ml, ["Meal", "Pre-Time", "Last cooked"])
+for m in meals:
+    ml.append([m["name"], m["pre"] or "Normal", m["last"]])
+for col, w in {"A": 40, "B": 14, "C": 16}.items():
+    ml.column_dimensions[col].width = w
+for row in ml.iter_rows(min_row=2, max_row=ml.max_row, max_col=3):
+    row[0].font = Font(bold=True, size=11)
+    row[0].alignment = Alignment(vertical="center")
+    row[1].alignment = Alignment(horizontal="center", vertical="center")
+    row[2].alignment = Alignment(horizontal="center", vertical="center")
+    # Fast meals are the whole point of the picker's filter, so make them pop
+    if str(row[1].value or "").strip().lower().startswith("fast"):
+        row[1].font = Font(bold=True, color=GREEN, size=11)
+    else:
+        row[1].font = Font(color=GREY, size=11)
+if ml.max_row >= 2:
+    _band(ml, 2, ml.max_row, 3)
+    ml.auto_filter.ref = "A1:C%d" % ml.max_row
+dv_pre = DataValidation(type="list", formula1='"Fast,Normal"', allow_blank=True)
+dv_pre.promptTitle = "Prep time"
+dv_pre.prompt = ("Fast = weeknight quick. The tablet's meal picker has a "
+                 "'Fast only' filter that reads this column.")
+ml.add_data_validation(dv_pre)
+dv_pre.add("B2:B300")
+
+# ---------------------------------------------------------------- Tracker tab
+tracker = live_tracker()
+tr = wb.create_sheet("Tracker")
+style_header(tr, ["Meal", "Date Cooked", "Day", "Rating", "Notes"])
+for t in tracker:
+    tr.append([t.get("meal", ""), t.get("date", ""), t.get("day", ""),
+               t.get("rating", ""), t.get("notes", "")])
+for col, w in {"A": 40, "B": 14, "C": 12, "D": 10, "E": 46}.items():
+    tr.column_dimensions[col].width = w
+for row in tr.iter_rows(min_row=2, max_row=tr.max_row, max_col=5):
+    row[0].font = Font(bold=True, size=11)
+    for cell in row[1:4]:
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    row[4].alignment = Alignment(wrap_text=True, vertical="top")
+if tr.max_row >= 2:
+    _band(tr, 2, tr.max_row, 5)
+    tr.auto_filter.ref = "A1:E%d" % tr.max_row
+dv_rate = DataValidation(type="list", formula1='"up,down"', allow_blank=True)
+dv_rate.promptTitle = "Did it land?"
+dv_rate.prompt = "up = make it again, down = don't. Rate from the tablet or here."
+tr.add_data_validation(dv_rate)
+dv_rate.add("D2:D400")
+tnote = tr.cell(row=tr.max_row + 2, column=1,
+                value="What actually got cooked. The tablet logs this as meals are set; "
+                      "use the planner's 'Copy for the Tracker tab' button to paste updates "
+                      "in. Anything rated up is a candidate for the Meals tab.")
+tnote.font = Font(italic=True, color="777777", size=10)
 
 # ---------------------------------------------------------------- guide tab
 gd = wb.create_sheet("How this works")
