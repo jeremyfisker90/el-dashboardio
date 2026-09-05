@@ -17,6 +17,7 @@ PLACEHOLDER = {
     "required_left": 0, "required_total": 0, "optional_unlocked": True,
     "open_required": 0, "open_optional": 0,
     "done_ian": 0, "done_evan": 0, "pts_open": 0,
+    "parent": 0,
     "leader": "", "streak_kid": "", "streak_weeks": 0,
     "last_kid": "", "last_ian": 0, "last_evan": 0, "last_week_start": "",
     "total_ian": 0, "total_evan": 0, "total_weeks": 1,
@@ -73,6 +74,8 @@ def main():
             "ok": True,
             "ian": int(tot.get("ian", 0)),
             "evan": int(tot.get("evan", 0)),
+            # weekly parent total. Deliberately NOT fed into leader/streak/champion.
+            "parent": int(tot.get("parent", 0)),
             "target": int(d.get("target", 100)),
             "required_left": int(d.get("required_left", 0)),
             "required_total": int(d.get("required_total", 0)),

@@ -794,8 +794,12 @@ function render(){
         + '<div class="claim"><button class="approve" onclick="approveFix(' + c.id + ')">Parent: approve the redo ✓</button></div>';
     } else {
       detail += '<div class="claim">'
-        + '<button class="' + w + '" onclick="claim(' + c.id + ',\'' + w + '\')">'
-        + (w === 'ian' ? 'Ian' : 'Evan') + ': Done ✓</button>'
+        + (w === 'parent'
+            // parents self-complete: no approval step, and this must NOT run
+            // through claim(), which is the kids' points-and-approval path.
+            ? '<button class="parent" onclick="parentDone(' + c.id + ')">Parent: Done ✓</button>'
+            : '<button class="' + w + '" onclick="claim(' + c.id + ',&#39;' + w + '&#39;)">'
+              + (w === 'ian' ? 'Ian' : 'Evan') + ': Done ✓</button>')
         + '<button class="release" onclick="queueChore(' + c.id + ',\'na\')">↩ Board</button></div>';
     }
     detail += '<div style="margin-top:8px;text-align:right">'
@@ -837,8 +841,11 @@ function render(){
 
   // a finished job, shown under the kid who did it (their colour + a ✓ tag)
   const doneCard = (c) => {
-    const col = c.done_by === 'ian' ? '#2dd4bf' : '#fbbf24';
-    const nm  = c.done_by === 'ian' ? 'Ian' : 'Evan';
+    // 'parent' used to fall through to the Evan branch and render "Evan ✓"
+    const col = c.done_by === 'ian' ? '#2dd4bf'
+              : c.done_by === 'parent' ? '#a855f7' : '#fbbf24';
+    const nm  = c.done_by === 'ian' ? 'Ian'
+              : c.done_by === 'parent' ? 'Parent' : 'Evan';
     return '<div class="chore qmini donemini who-' + c.done_by + '" style="border-color:' + col + '77">'
       + '<div class="qrow"><span class="dchk" style="color:' + col + '">✓</span>'
       + '<span class="qname">' + esc(c.name) + '</span>'
@@ -888,16 +895,24 @@ function render(){
     const doneP = done.filter(c => c.done_by === 'parent')
         .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
     if (!q.length && !doneP.length) return '';
+    // Weekly parent points. Shown for the record only: nothing in the champion,
+    // streak or optional-unlock logic reads this, so parents stay out of the
+    // Ian-vs-Evan race by design.
+    const pPts = (D.totals && D.totals.parent) || 0;
+    const qPts = q.reduce((a,c)=>a+(parseInt(c.points)||0),0);
     return '<div class="kpanel parentq">'
       + '<div class="khead"><span class="kname">🧹 PARENT QUEUE</span>'
+      + '<span class="kpts" style="color:#d8b4fe">' + pPts + ' <small>pts</small></span>'
       + '<span class="qcount">' + q.length + ' IN QUEUE'
+      + (qPts ? ' · ' + qPts + ' PTS QUEUED' : '')
       + (doneP.length ? ' · ' + doneP.length + ' DONE' : '') + '</span></div>'
       + '<div class="kbody">'
       + q.map(c => queueCard(c, false)).join('')
       + (!q.length ? '<div class="empty">Nothing queued for the parents.</div>' : '')
       + (doneP.length
           ? '<div class="ksub donesub parentq">✅ COMPLETED BY PARENTS'
-            + '<span class="kcount">' + doneP.length + ' done</span></div>'
+            + '<span class="kcount">' + doneP.length + ' done · '
+            + doneP.reduce((a,c)=>a+(parseInt(c.points)||0),0) + ' pts this week</span></div>'
             + doneP.map(doneCard).join('')
           : '')
       + '</div></div>';
@@ -1473,7 +1488,7 @@ async function reject(id){
 async function parentDone(id){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
   const ok = await askCode({title:'🧹 Parent Code',
-    sub:'Mark <b>'+esc(c.name||'this chore')+'</b> done by a parent? No approval needed, no points banked.',
+    sub:'Mark <b>'+esc(c.name||'this chore')+'</b> done by a parent? No approval needed. Points go to the parent weekly total, not the kids’ race.',
     accent:'#a855f7', validate:pin=>pin===PARENT_CODE});
   if (!ok) return;
   try { await api('/chores/parent_done', {id}); }
