@@ -200,6 +200,18 @@ NEON_CAM_MOD = {"style":
     "box-shadow:0 0 14px rgba(34,211,238,0.25),0 8px 20px rgba(0,0,0,0.5)!important;overflow:hidden;}"}
 
 
+def _webrtc_cam_section(title, icon, cam, extras=()):
+    """Alarm.com cameras stream over Janus/WebRTC, which picture-entity cannot
+    play - it would only ever show a still. The integration ships its own card
+    for the live feed; picture-entity stays for the RTSP/HLS cameras."""
+    return {"type": "grid", "cards": [
+        {"type": "heading", "heading": title, "heading_style": "title", "icon": icon},
+        {"type": "custom:alarm-webrtc-card", "entity": cam,
+         "card_mod": dict(NEON_CAM_MOD),
+         "grid_options": {"columns": "full", "rows": 5}},
+    ] + list(extras)}
+
+
 def _cam_section(title, icon, cam, extras=()):
     return {"type": "grid", "cards": [
         {"type": "heading", "heading": title, "heading_style": "title", "icon": icon},
@@ -224,6 +236,7 @@ for v in cfg["views"]:
         {"type": "tile", "entity": "sensor.front_door_battery", "name": "Battery"},
     ])
     rear = _cam_section("Back of House", "mdi:cctv", "camera.back_of_house_live_view")
+    drive = _webrtc_cam_section("Driveway", "mdi:car", "camera.driveway_camera")
     yard = _cam_section("Front Yard", "mdi:grass", "camera.front_yard_wyze", [
         {"type": "tile", "entity": "binary_sensor.wyze_cam_front_porch_cam_motion", "name": "Motion"},
         {"type": "tile", "entity": "sensor.wyze_cam_front_porch_cam_signal", "name": "WiFi"},
@@ -241,7 +254,7 @@ for v in cfg["views"]:
             {"type": "tile", "entity": "sensor.x2d_20p6aj631801302_remaining_time",
              "name": "Time Left"},
         ])
-    v["sections"] = [front, rear, yard] + ([printer] if printer else []) + backs
+    v["sections"] = [front, rear, drive, yard] + ([printer] if printer else []) + backs
 
 # ---------------------------------------------------- 3D printing view (X2D)
 X2D = "x2d_20p6aj631801302"
