@@ -878,6 +878,21 @@ function render(){
       + '</div>';
   };
 
+  // A banked log entry. The COMPLETED list above is built from live chores, so
+  // it empties at the 6am roll and it looked like the points had been taken
+  // away. The log is the real weekly bank - render it so the week stays visible.
+  const bankRow = (e, col) => {
+    const d = e.on ? new Date(e.on + 'T12:00:00') : null;
+    const day = d ? d.toLocaleDateString(undefined, {weekday:'short'}) : '';
+    return '<div class="chore qmini donemini bankrow" style="border-color:' + col + '44">'
+      + '<div class="qrow"><span class="dchk" style="color:' + col + '">✓</span>'
+      + '<span class="qname">' + esc(e.name || '') + '</span>'
+      + (day ? '<span class="donepill" style="color:' + col + ';border-color:' + col
+               + '">' + day + '</span>' : '')
+      + '<span class="badge">' + (parseInt(e.points)||0) + ' pts</span></div>'
+      + '</div>';
+  };
+
   const kidPanel = (k, label) => {
     const val = tot[k] || 0;
     const pct = Math.min(100, Math.round(val / t * 100));
@@ -887,6 +902,12 @@ function render(){
     const doneK = done.filter(c => c.done_by === k)
         .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
     const donePts = doneK.reduce((s, c) => s + (parseInt(c.points) || 0), 0);
+    // Everything banked since Monday, newest first. Chore-day stamps only exist
+    // on entries claimed after this shipped; older ones just sort last.
+    const bank = ((D.log || {})[k] || []).slice()
+        .sort((a,b) => String(b.at || b.on || '').localeCompare(String(a.at || a.on || '')));
+    const bankPts = bank.reduce((s, e) => s + (parseInt(e.points) || 0), 0);
+    const kcol = k === 'ian' ? '#2dd4bf' : '#fbbf24';
     return '<div class="kpanel ' + k + '">'
       + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
       + '<span class="kpts">' + val + ' <small>/ ' + t + '</small></span>'
@@ -901,9 +922,15 @@ function render(){
       + (!rej.length && !q.length
           ? '<div class="empty">Queue is empty — grab a job from the board ⬅</div>' : '')
       + (doneK.length
-          ? '<div class="ksub donesub ' + k + '">✅ COMPLETED JOBS'
+          ? '<div class="ksub donesub ' + k + '">✅ COMPLETED TODAY'
             + '<span class="kcount">' + doneK.length + ' done · ' + donePts + ' pts</span></div>'
             + doneK.map(doneCard).join('')
+          : '')
+      + (bank.length
+          ? '<div class="ksub donesub ' + k + '">🏦 EARNED THIS WEEK'
+            + '<span class="kcount">' + bank.length + ' job' + (bank.length === 1 ? '' : 's')
+            + ' · ' + bankPts + ' pts</span></div>'
+            + bank.map(e => bankRow(e, kcol)).join('')
           : '')
       + '</div></div>';
   };
