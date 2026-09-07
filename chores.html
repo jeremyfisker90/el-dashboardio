@@ -804,9 +804,19 @@ const OPEN_ROOMS = new Set();
 function canonRoom(v){
   const t = String(v || '').trim();
   if (!t) return NO_ROOM;
-  return t.toLowerCase().replace(/\w/g, ch => ch.toUpperCase());
+  // Title Case without a regex: "OUtdoors" and "outdoors" both land on
+  // "Outdoors" so a typo in the sheet cannot split a room in two.
+  return t.toLowerCase().split(' ').filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
-function toggleRoom(name){
+// Dispatch by index, never by name. The name went into the onclick attribute
+// via JSON.stringify, whose double quotes closed the attribute early and killed
+// the handler - and quoting it by hand breaks on rooms like "Ian's Room".
+let ROOM_KEYS = [];
+function toggleRoomIdx(i){
+  const name = ROOM_KEYS[i];
+  if (name === undefined) return;
   if (OPEN_ROOMS.has(name)) OPEN_ROOMS.delete(name); else OPEN_ROOMS.add(name);
   render();
 }
@@ -1116,6 +1126,7 @@ function render(){
       if ((a === NO_ROOM) !== (b === NO_ROOM)) return a === NO_ROOM ? 1 : -1;
       return a.localeCompare(b);
     });
+    ROOM_KEYS = names;
 
     if (!names.length){
       html += '<div class="empty">Every chore is queued or done. 🎉</div>';
@@ -1131,7 +1142,7 @@ function render(){
         if (g.req.length)   bits.push(g.req.length + ' required');
         if (g.opt.length)   bits.push(g.opt.length + ' optional');
         html += '<div class="roomgrp' + (isOpen ? ' open' : '') + '">'
-          + '<button class="roomhead" onclick="toggleRoom(' + JSON.stringify(name) + ')">'
+          + '<button class="roomhead" onclick="toggleRoomIdx(' + ROOM_KEYS.indexOf(name) + ')">'
           +   '<span class="rmchev">' + (isOpen ? '▾' : '▸') + '</span>'
           +   '<span class="rmname">' + esc(name) + '</span>'
           +   '<span class="rmmeta">' + bits.join(' · ') + '</span>'
