@@ -12,17 +12,23 @@ const FP_API = location.protocol === "https:"
 const S = 13, THICK = 16, GAP = 0.3;
 const TITLES = { floor1: "1st Floor", floor2: "2nd Floor", basement: "Lower Level" };
 
+// Rebuilt from Home Assistant's area assignments. Most of the old ids had died
+// with the SmartThings and Zigbee renames, so almost nothing lit up and tapping
+// a room did nothing. Keys must match the room names in the saved layout.
+// The six family-room bulbs are listed individually rather than through the
+// light.family_room_lights group, so each one gets its own dot on the model.
 const ROOM_LIGHTS = {
-  "Office": ["switch.office_overhead", "light.office_lamp", "light.office_floor_lamp"],
-  "Family Room": ["light.family_room_lamp_1", "light.family_room_lamp_2",
-                  "light.familyroom_lamp_3", "switch.xmaslightsfamilyroom",
-                  "light.charging_station"],
-  "Kitchen": ["light.kitchen_cabinets"],
-  "Foyer": ["light.foyer_lights"],
-  "Porch": ["light.front_door_light"],
-  "Ian's Room": ["light.devastator", "light.ianroom"],
+  "Office": ["light.smart_rgbtw_bulb", "switch.office_overhead"],
+  "Family Room": ["light.family_room_1", "light.family_room_2", "light.family_room_3",
+                  "light.floor_lamp_1", "light.floor_lamp_2", "light.floor_lamp_3",
+                  "switch.xmaslightsfamilyroom"],
+  "Kitchen": ["light.scene_capable_wall_dimmer_switch"],
+  "Foyer": ["light.foyer_foyer_lights"],
+  "Porch": ["light.in_wall_paddle_dimmer_500s"],
+  "Screened in porch": ["light.back_of_house_light"],
+  "Ian's Room": ["light.devastator"],
   "Evan's Room": ["light.orange_dog"],
-  "Master Bedroom": ["light.bedroom_lamp_1", "light.bedroom_lamp_2"],
+  "Master Bedroom": ["light.bedroom_1", "light.bedroom_2"],
 };
 // Entertainment mode: media devices per room (same room names as the layout).
 // Placement is a best guess from device names — tell me any that sit wrong.
