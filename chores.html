@@ -614,6 +614,175 @@
                    box-shadow:0 0 10px rgba(251,191,36,.22); }
   .claim .release { flex:0 0 auto; background:rgba(255,255,255,.05); color:#9fb2d0;
                     border:1px solid rgba(148,163,184,.30); padding:11px 14px; }
+
+  /* ==================================================================
+     DESIGN SYSTEM - normalising layer, deliberately last in the sheet.
+     Everything above sets its own look; this makes them agree.
+     ================================================================== */
+  :root {
+    --r: 14px;                       /* one radius, everywhere */
+    --bd: rgba(140,170,215,0.20);    /* one border */
+    --bd-on: color-mix(in srgb, var(--neon,#22d3ee) 50%, transparent);
+    --lacquer: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 46%),
+               linear-gradient(180deg, #0b1020 0%, #070b16 100%);
+    --lift: 0 1px 0 rgba(255,255,255,0.045) inset, 0 8px 20px rgba(0,0,0,0.5);
+    --glow: 0 0 18px color-mix(in srgb, var(--neon,#22d3ee) 20%, transparent);
+  }
+
+  /* ---- every container: same shell, different accent ---- */
+  .panel, .kpanel, .neon, .roomgrp, .ptbar, .casino-marquee, .donecol-head {
+    position:relative;
+    border-radius:var(--r) !important;
+    background:var(--lacquer) !important;
+    border:1px solid var(--bd) !important;
+    box-shadow:var(--lift) !important;
+    overflow:hidden;
+  }
+  .panel        { --neon:#22d3ee; margin:0 2px 11px; width:calc(100% - 4px); }
+  .kpanel       { --neon:#22d3ee; margin:0 2px 11px; width:calc(100% - 4px); }
+  .kpanel.ian   { --neon:#2dd4bf; }
+  .kpanel.evan  { --neon:#fbbf24; }
+  .kpanel.parentq { --neon:#d8b4fe; }
+  .roomgrp      { --neon:#22d3ee; margin:0 0 9px; }
+  .ptbar        { --neon:#38bdf8; margin:0 0 12px; padding:10px 12px; }
+  .done-btn     { --neon:#22c55e; }
+  .qbar         { --neon:#a855f7; }
+  .adhoc-btn    { --neon:#f97316; }
+  .casino-marquee { --neon:#e879f9; margin:0 2px 11px !important;
+                    width:calc(100% - 4px) !important; padding:16px 18px !important;
+                    border-width:1px !important; }
+
+  /* ---- the one accent gesture: a rule along the top edge ---- */
+  .panel::before, .kpanel::before, .neon::before, .roomgrp::before,
+  .ptbar::before, .casino-marquee::before {
+    content:''; position:absolute; inset:0 0 auto 0; height:2px; z-index:2;
+    background:linear-gradient(90deg, transparent, var(--neon) 20%,
+                               var(--neon) 80%, transparent);
+    box-shadow:0 0 10px var(--neon);
+    opacity:.45; pointer-events:none;
+  }
+  .neon.on::before, .roomgrp.open::before, .done-btn.on::before { opacity:1; }
+  .neon.on, .roomgrp.open { border-color:var(--bd-on) !important;
+                            box-shadow:var(--lift), var(--glow) !important; }
+  /* the marquee's cabinet bulbs and the dotted trim were the loudest things
+     on the page; the accent rule already says "casino" */
+  .neon.lit::after, .cm-bulbs { display:none !important; }
+
+  /* ---- one header type treatment ---- */
+  .phead, .khead, .done-btn, .qbar-lbl, .rmname, .cm-title {
+    font-size:14px !important; font-weight:900 !important;
+    letter-spacing:1.1px !important; text-transform:uppercase !important;
+    color:#eaf4ff !important;
+    text-shadow:0 0 9px color-mix(in srgb, var(--neon,#22d3ee) 55%, transparent) !important;
+  }
+  .phead, .khead { padding:11px 14px !important;
+                   border-bottom:1px solid rgba(140,170,215,0.13) !important;
+                   background:rgba(255,255,255,0.018) !important; }
+  .pbody, .kbody { padding:12px !important; }
+  /* secondary text on a header - counts, hints - stays quiet */
+  .note, .qcount, .rmmeta, .cm-sub, .ql-n, .dc-sub {
+    font-size:11px !important; font-weight:700 !important; letter-spacing:0.2px !important;
+    text-transform:none !important; color:#8fa6c4 !important; text-shadow:none !important; }
+  .note, .qcount { margin-left:auto; }
+
+  /* ---- numbers read as one scoreboard ---- */
+  .kpts, .ql-pts, .rmpts, .dc-pts, .db-tot, .badge {
+    font-weight:900 !important; letter-spacing:0.3px !important; }
+
+  /* ---- the ad-hoc button was the only lime thing on the page ---- */
+  .adhoc-btn { color:#eaf4ff !important; background:var(--lacquer) !important;
+               border:1px solid var(--bd) !important; padding:14px 17px !important;
+               font-size:14px !important; letter-spacing:1.1px !important;
+               text-transform:uppercase !important; }
+  .adhoc-btn:active, .casino-marquee:active, .done-btn:active, .qlink:active,
+  .roomhead:active { transform:translateY(1px); filter:brightness(1.08); }
+
+  /* ---- casino marquee: same shell, keeps its character in the type ---- */
+  .cm-inner { gap:14px !important; }
+  .cm-title { font-size:19px !important; letter-spacing:3px !important;
+              color:#fdf4ff !important;
+              text-shadow:0 0 14px rgba(232,121,249,0.75) !important; }
+  .cm-ico { filter:drop-shadow(0 0 8px rgba(232,121,249,0.55)); }
+
+  /* ---- section labels inside a panel ---- */
+  .sub, .ksub, .donesub {
+    font-size:11px !important; font-weight:900 !important; letter-spacing:1.1px !important;
+    text-transform:uppercase !important; color:#9fb3cf !important;
+    border-top:1px solid rgba(140,170,215,0.12); padding-top:9px !important;
+    margin:12px 0 8px !important; }
+  .dailynote { font-size:11.5px !important; font-weight:700 !important;
+               color:#9fb3cf !important; background:rgba(255,255,255,0.025) !important;
+               border:1px solid rgba(140,170,215,0.14) !important;
+               border-radius:10px !important; padding:9px 11px !important; }
+
+  /* ---- density + presence pass ----------------------------------------
+     Full-bleed strips left everything floating in dead space and the accent
+     rule was too faint to register. Tighten the rhythm, and give each row a
+     lit left edge so the eye has something to track down the column. */
+  #app { max-width:1180px; margin-inline:auto; }
+
+  .roomhead { padding:9px 13px !important; gap:11px !important; }
+  .rmname   { font-size:14.5px !important; letter-spacing:1.4px !important; }
+  .rmmeta   { flex:0 1 auto !important; margin-right:auto; }
+  .rmpts    { font-size:13px !important; }
+  .roomgrp  { margin:0 0 6px !important; }
+  /* lit left edge, brighter when the room is open */
+  .roomgrp::after { content:''; position:absolute; inset:0 auto 0 0; width:3px;
+                    background:var(--neon); opacity:.35; }
+  .roomgrp.open::after { opacity:1; box-shadow:0 0 12px var(--neon); }
+
+  .panel::before, .kpanel::before, .neon::before,
+  .roomgrp::before, .ptbar::before, .casino-marquee::before { opacity:.7; }
+
+  /* the queue links were a third of the screen each */
+  .qbar  { gap:7px !important; padding:9px 12px !important; }
+  .qlink { flex:0 1 190px !important; padding:7px 12px !important; }
+  .ql-pts { font-size:19px !important; }
+
+  .done-btn, .adhoc-btn { padding:11px 15px !important; }
+  .phead, .khead { padding:9px 13px !important; }
+  .pbody { padding:11px !important; }
+  .ptbar { padding:8px 11px !important; margin:0 0 10px !important; }
+  .casino-marquee { padding:12px 18px !important; }
+  .cm-title { font-size:17px !important; }
+  .neon, .panel, .kpanel { margin-bottom:8px !important; }
+
+  /* ---- job board: two columns of categories, compact rows inside ---- */
+  .roomcols { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 9px;
+              align-items:start; }
+  .roomcols.solo { grid-template-columns:1fr; }
+
+  .joblist { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr));
+             gap:6px; }
+  .jobrow { display:flex; align-items:center; gap:9px; width:100%; padding:9px 11px;
+            font-family:inherit; text-align:left; cursor:pointer; color:#e8f0ff;
+            background:rgba(255,255,255,0.028); border-radius:10px;
+            border:1px solid rgba(140,170,215,0.16); border-left:3px solid #8fa6c4; }
+  .jobrow:active { filter:brightness(1.12); transform:translateY(1px); }
+  .jobrow.is-daily { border-left-color:#7dd3fc; }
+  .jobrow.is-req   { border-left-color:#ff9a6b; }
+  .jobrow.is-opt   { border-left-color:#5fe0c6; }
+  .jr-name { flex:1; font-size:13.5px; font-weight:800; }
+  .jr-pts  { flex:none; font-size:14px; font-weight:900; color:#ffd76e; }
+
+  /* ---- the chore popup ---- */
+  .jobbox { width:min(430px,94vw); text-align:left; }
+  .jobbox .club-sign { font-size:20px; letter-spacing:1.2px; text-align:center; }
+  .jobbox .entry-msg { text-align:center; }
+  .jobdesc { margin:12px 0 0; padding:11px 12px; font-size:13px; line-height:1.45;
+             color:#cbd5e1; background:rgba(255,255,255,0.03); border-radius:10px;
+             border:1px solid rgba(140,170,215,0.16); }
+  .jobheld { margin:10px 0 0; font-size:12px; font-weight:800; color:#fbbf24; }
+  .jobacts { display:flex; gap:7px; margin-top:13px; flex-wrap:wrap; }
+  .jobacts.sm { margin-top:9px; justify-content:flex-end; }
+  .jobacts button { flex:1 1 110px; padding:10px 12px; font-family:inherit;
+                    font-size:13px; font-weight:900; border-radius:10px;
+                    cursor:pointer; border:1px solid; }
+  .jobacts.sm button { flex:0 0 auto; font-size:12px; padding:7px 12px; }
+  .jobacts .ian    { color:#2dd4bf; border-color:#2dd4bf66; background:rgba(45,212,191,.10); }
+  .jobacts .evan   { color:#fbbf24; border-color:#fbbf2466; background:rgba(251,191,36,.10); }
+  .jobacts .parent { color:#d8b4fe; border-color:#d8b4fe66; background:rgba(216,180,254,.10); }
+  .jobacts .taken  { opacity:.45; cursor:default; }
 </style>
 </head>
 <body>
@@ -621,6 +790,15 @@
 
 <!-- Shared keypad for every code prompt (claim / reject / parent actions) -->
 <!-- Filter the job board by point value -->
+<div id="chorepop" class="casino-ov" onclick="if(event.target===this)closeChore()">
+  <div class="club jobbox">
+    <button class="club-x" onclick="closeChore()">✕</button>
+    <div class="club-sign small" id="jobTitle">CHORE</div>
+    <div class="entry-msg" id="jobSub"></div>
+    <div id="jobBody"></div>
+  </div>
+</div>
+
 <div id="ptfilter" class="casino-ov" onclick="if(event.target===this)closePts()">
   <div class="club ptbox">
     <button class="club-x" onclick="closePts()">✕</button>
@@ -825,6 +1003,56 @@ function choreHtml(c, locked, pending){
 // cannot begin with a digit.
 // ===== filter the job board by point value =====
 function closePts(){ document.getElementById('ptfilter').classList.remove('show'); }
+
+// ===== one chore, everything about it =====
+function closeChore(){ document.getElementById('chorepop').classList.remove('show'); }
+
+function openChore(id){
+  const c = (D.chores || []).find(x => x.id === id);
+  if (!c) return;
+  const held = (D.claims || []).filter(x => x.chore_id === id
+                 && (x.state === 'queued' || x.state === 'done'));
+  const mine = k => held.some(x => x.kid === k);
+
+  document.getElementById('jobTitle').innerHTML = esc(c.name);
+  document.getElementById('jobSub').innerHTML =
+    (parseInt(c.points)||0) + ' ' + LED
+    + (c.room ? ' · ' + esc(canonRoom(c.room)) : '')
+    + ' · ' + (c.kind === 'optional' ? 'Optional' : 'Required');
+
+  const takeBtn = (k, label, cls) => mine(k)
+    ? '<button class="' + cls + ' taken" disabled>' + label + ' already has it</button>'
+    : '<button class="' + cls + '" onclick="takeChore(' + id + ',&#39;' + k + '&#39;)">'
+      + label + ': take it</button>';
+
+  document.getElementById('jobBody').innerHTML =
+      (c.description ? '<div class="jobdesc">' + esc(c.description) + '</div>' : '')
+    + (held.length
+        ? '<div class="jobheld">Working on it now: '
+          + held.map(x => (PICK_LABEL[x.kid] || x.kid)
+              + (x.state === 'done' ? ' (waiting on a parent)' : '')).join(', ')
+          + '</div>'
+        : '')
+    + '<div class="jobacts">'
+    +   takeBtn('ian', 'Ian', 'ian')
+    +   takeBtn('evan', 'Evan', 'evan')
+    +   takeBtn('parent', 'Parent', 'parent')
+    + '</div>'
+    + '<div class="jobacts sm">'
+    +   '<button class="btn ghost" onclick="closeChore(); editChore(' + id + ')">Edit</button>'
+    +   '<button class="btn ghost" onclick="closeChore(); delChore(' + id + ')">Delete</button>'
+    + '</div>';
+
+  document.getElementById('chorepop').classList.add('show');
+}
+
+// Taking a job creates a claim; the chore stays on the board for everyone else.
+async function takeChore(id, kid){
+  try { await api('/chores/claim', {id, kid}); }
+  catch(e){ alert(e.detail || ('Could not take it: ' + e.status)); }
+  closeChore();
+  await load();
+}
 
 function showPts(pts){
   const all = D.chores || [];
@@ -1239,6 +1467,9 @@ function render(){
     if (!names.length){
       html += '<div class="empty">Every chore is queued or done. 🎉</div>';
     } else {
+      // Two columns while browsing categories; a drilled-in room takes the
+      // full width so its job list has room to breathe.
+      html += '<div class="roomcols' + (OPEN_ROOM ? ' solo' : '') + '">';
       for (const name of names){
         if (OPEN_ROOM && OPEN_ROOM !== name) continue;   // drilled in: hide the rest
         const g = rooms.get(name);
@@ -1258,27 +1489,24 @@ function render(){
           +   '<span class="rmpts">' + pts + ' pts</span>'
           + '</button>';
         if (isOpen){
+          // Title and points only. Everything else lives in the popup, so an
+          // open room stays short enough to read without scrolling.
+          const rowsOf = (list, cls) => list.map(c =>
+            '<button class="jobrow ' + cls + '" onclick="openChore(' + c.id + ')">'
+            + '<span class="jr-name">' + esc(c.name) + '</span>'
+            + '<span class="jr-pts">' + (parseInt(c.points)||0) + '</span>'
+            + '</button>').join('');
           html += '<div class="roombody">'
-               + '<button class="roomback" onclick="closeRoom()">← All rooms</button>';
-          if (g.daily.length){
-            html += '<div class="sub dailysub" style="color:#7dd3fc">⏰ DAILY REQUIRED'
-                 + '<span class="pill daily2">RESETS 6AM</span></div>'
-                 + grid(g.daily.map(c => choreHtml(c, false)));
-          }
-          if (g.req.length){
-            html += '<div class="sub" style="color:#ff9a6b">REQUIRED'
-                 + '<span class="pill must">DO THESE FIRST</span></div>'
-                 + grid(g.req.map(c => choreHtml(c, false)));
-          }
-          if (g.opt.length){
-            html += '<div class="sub" style="color:#5fe0c6">OPTIONAL — EXTRA POINTS'
-                 + '<span class="pill open">🔓 1 REQUIRED = 1 OPTIONAL</span></div>'
-                 + grid(g.opt.map(c => choreHtml(c, false)));
-          }
-          html += '</div>';
+               + '<button class="roomback" onclick="closeRoom()">← All rooms</button>'
+               + '<div class="joblist">'
+               +   rowsOf(g.daily, 'is-daily')
+               +   rowsOf(g.req, 'is-req')
+               +   rowsOf(g.opt, 'is-opt')
+               + '</div></div>';
         }
         html += '</div>';
       }
+      html += '</div>';
     }
   }
   html += '</div></div>';
