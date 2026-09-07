@@ -205,6 +205,28 @@
   .qmini .qdetail { display:none; margin-top:9px; padding-top:9px; cursor:default;
                     border-top:1px solid rgba(148,163,184,.18); }
   .qmini.open .qdetail { display:block; }
+  .rothead { cursor:pointer; user-select:none; }
+  .rothead:active { filter:brightness(1.12); }
+
+  /* ---- completed-jobs button + its three columns ---- */
+  .done-btn { display:flex; align-items:center; justify-content:space-between; gap:10px;
+              width:calc(100% - 4px); margin:0 2px 10px; padding:13px 16px;
+              font-family:inherit; font-size:15px; font-weight:900; letter-spacing:0.4px;
+              color:#dbeafe; background:rgba(12,18,34,0.78); cursor:pointer;
+              border:1px solid rgba(120,150,190,0.3); border-radius:13px; }
+  .done-btn.on { border-color:rgba(34,211,238,0.5);
+                 box-shadow:0 0 14px rgba(34,211,238,0.16); }
+  .done-btn:active { transform:translateY(1px); filter:brightness(1.1); }
+  .db-tot { display:flex; gap:12px; font-size:13px; font-weight:900; }
+  .donecols { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+              gap:12px; }
+  .donecol-head { display:flex; align-items:baseline; gap:8px; padding:8px 10px;
+                  margin:0 0 8px; border:1px solid; border-radius:10px;
+                  background:rgba(255,255,255,0.03); }
+  .dc-name { font-size:15px; font-weight:900; }
+  .dc-pts  { font-size:14px; font-weight:900; margin-left:auto; }
+  .dc-sub  { font-size:11px; font-weight:700; color:#8fa6c4; width:100%; }
+
   /* ---- room accordion on the job board ---- */
   .roomgrp { margin:0 0 8px; border:1px solid rgba(120,150,190,0.22); border-radius:12px;
              background:rgba(12,18,34,0.55); overflow:hidden; }
@@ -770,6 +792,11 @@ function freqCls(f){
   return String(f || 'weekly').replace('-','').replace(/^2day$/, 'twoday');
 }
 
+let SHOW_DONE = false;
+let SHOW_LATER = false;
+function toggleRotation(){ SHOW_LATER = !SHOW_LATER; render(); }
+function toggleCompleted(){ SHOW_DONE = !SHOW_DONE; render(); }
+
 const NO_ROOM = 'Anywhere';
 const OPEN_ROOMS = new Set();
 // The sheet is typed by hand, so "Outdoors" and "OUtdoors" both turn up. Group
@@ -934,21 +961,12 @@ function render(){
     const msg = val >= t ? '<span class="win">🎯 Target hit!</span>' : (t - val) + ' to go';
     const rej = pend.filter(c => c.rejected && c.rejected.kid === k);   // fixes sit on top
     const q = k === 'ian' ? qIan : qEvan;
-    const doneK = done.filter(c => c.done_by === k)
-        .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
-    const donePts = doneK.reduce((s, c) => s + (parseInt(c.points) || 0), 0);
-    // Everything banked since Monday, newest first. Chore-day stamps only exist
-    // on entries claimed after this shipped; older ones just sort last.
-    const bank = ((D.log || {})[k] || []).slice()
-        .sort((a,b) => String(b.at || b.on || '').localeCompare(String(a.at || a.on || '')));
-    const bankPts = bank.reduce((s, e) => s + (parseInt(e.points) || 0), 0);
-    const kcol = k === 'ian' ? '#2dd4bf' : '#fbbf24';
     return '<div class="kpanel ' + k + '">'
       + '<div class="khead"><span class="kname">🧺 ' + label + '’S QUEUE</span>'
       + '<span class="kpts">' + val + ' <small>/ ' + t + '</small></span>'
       + '<span class="qcount">' + (rej.length + q.length) + ' IN QUEUE'
       + (rej.length ? ' · ' + rej.length + ' TO FIX' : '')
-      + (doneK.length ? ' · ' + doneK.length + ' DONE' : '') + '</span></div>'
+      + '</span></div>'
       + '<div class="kbody">'
       + '<div class="bar"><div style="width:' + pct + '%"></div></div>'
       + '<div class="goal">' + msg + '</div>'
@@ -956,17 +974,6 @@ function render(){
       + q.map(c => queueCard(c, false)).join('')
       + (!rej.length && !q.length
           ? '<div class="empty">Queue is empty — grab a job from the board ⬅</div>' : '')
-      + (doneK.length
-          ? '<div class="ksub donesub ' + k + '">✅ COMPLETED TODAY'
-            + '<span class="kcount">' + doneK.length + ' done · ' + donePts + ' pts</span></div>'
-            + doneK.map(doneCard).join('')
-          : '')
-      + (bank.length
-          ? '<div class="ksub donesub ' + k + '">🏦 EARNED THIS WEEK'
-            + '<span class="kcount">' + bank.length + ' job' + (bank.length === 1 ? '' : 's')
-            + ' · ' + bankPts + ' pts</span></div>'
-            + bank.map(e => bankRow(e, kcol)).join('')
-          : '')
       + '</div></div>';
   };
 
@@ -974,13 +981,6 @@ function render(){
   // a parent marking a job done books it straight to completed.
   const parentPanel = () => {
     const q = qParent;
-    const doneP = done.filter(c => c.done_by === 'parent')
-        .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
-    // Closed work comes off the weekly log, so it survives the 6am roll
-    // instead of clearing every morning like the live chore list does.
-    const pBank = ((D.log || {}).parent || []).slice()
-        .sort((a,b) => String(b.at || b.on || '').localeCompare(String(a.at || a.on || '')));
-    const pBankPts = pBank.reduce((s,e) => s + (parseInt(e.points)||0), 0);
     // Always render: an empty parent queue is information too.
     // Weekly parent points. Shown for the record only: nothing in the champion,
     // streak or optional-unlock logic reads this, so parents stay out of the
@@ -992,26 +992,63 @@ function render(){
       + '<span class="kpts" style="color:#d8b4fe">' + pPts + ' <small>pts</small></span>'
       + '<span class="qcount">' + q.length + ' IN QUEUE'
       + (qPts ? ' · ' + qPts + ' PTS QUEUED' : '')
-      + (doneP.length ? ' · ' + doneP.length + ' DONE' : '') + '</span></div>'
+      + '</span></div>'
       + '<div class="kbody">'
       + q.map(c => queueCard(c, false)).join('')
       + (!q.length ? '<div class="empty">Nothing queued for the parents — assign one with 3 = Parent.</div>' : '')
-      + (doneP.length
-          ? '<div class="ksub donesub parentq">✅ CLOSED TODAY'
-            + '<span class="kcount">' + doneP.length + ' done · '
-            + doneP.reduce((a,c)=>a+(parseInt(c.points)||0),0) + ' pts</span></div>'
-            + doneP.map(doneCard).join('')
-          : '')
-      + (pBank.length
-          ? '<div class="ksub donesub parentq">🗄️ CLOSED THIS WEEK'
-            + '<span class="kcount">' + pBank.length + ' job'
-            + (pBank.length === 1 ? '' : 's') + ' · ' + pBankPts + ' pts</span></div>'
-            + pBank.map(e => bankRow(e, '#d8b4fe')).join('')
-          : '')
       + '</div></div>';
   };
 
   // parent-only: drop a one-off "ad-hoc" chore straight into a kid's queue
+  // Completed work, all three people, behind one button. Off by default so the
+  // board opens on what still needs doing.
+  {
+    const totalDone = ((D.log||{}).ian||[]).length + ((D.log||{}).evan||[]).length
+                    + ((D.log||{}).parent||[]).length;
+    html += '<button class="done-btn' + (SHOW_DONE ? ' on' : '') + '" onclick="toggleCompleted()">'
+         +   '<span>' + (SHOW_DONE ? '▾' : '▸') + ' ✅ Completed Jobs</span>'
+         +   '<span class="db-tot">'
+         +     '<span style="color:#2dd4bf">Ian ' + (tot.ian||0) + '</span>'
+         +     '<span style="color:#fbbf24">Evan ' + (tot.evan||0) + '</span>'
+         +     '<span style="color:#d8b4fe">Parents ' + (tot.parent||0) + '</span>'
+         +   '</span>'
+         + '</button>';
+
+    if (SHOW_DONE){
+      // A parent still needs undo/reject on today's work, so live chore cards
+      // render above the week's banked rows rather than instead of them.
+      const section = (key, label, colour) => {
+        const liveCards = done.filter(c => c.done_by === key)
+          .slice().sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
+        const bank = ((D.log||{})[key]||[]).slice()
+          .sort((a,b) => String(b.at||b.on||'').localeCompare(String(a.at||a.on||'')));
+        const pts = tot[key] || 0;
+        return '<div class="donecol">'
+          + '<div class="donecol-head" style="border-color:' + colour + '77">'
+          +   '<span class="dc-name" style="color:' + colour + '">' + label + '</span>'
+          +   '<span class="dc-pts" style="color:' + colour + '">' + pts + ' pts</span>'
+          +   '<span class="dc-sub">' + bank.length + ' job' + (bank.length===1?'':'s')
+          +     ' this week</span>'
+          + '</div>'
+          + (liveCards.length
+              ? '<div class="ksub donesub">✅ TODAY</div>' + liveCards.map(doneCard).join('')
+              : '')
+          + (bank.length
+              ? '<div class="ksub donesub">🏦 THIS WEEK</div>'
+                + bank.map(e => bankRow(e, colour)).join('')
+              : '<div class="empty">Nothing banked yet this week.</div>')
+          + '</div>';
+      };
+      html += '<div class="panel donep"><div class="phead">✅ Completed Jobs'
+           +   '<span class="note">' + totalDone + ' banked this week · resets Monday</span>'
+           + '</div><div class="pbody"><div class="donecols">'
+           +   section('ian', 'Ian', '#2dd4bf')
+           +   section('evan', 'Evan', '#fbbf24')
+           +   section('parent', 'Parents', '#d8b4fe')
+           + '</div></div></div>';
+    }
+  }
+
   html += '<button class="adhoc-btn" onclick="adhocChore()">🎯 Ad-Hoc Chore Addition</button>';
 
   // the big flashing casino marquee — tap to enter (code-gated inside)
@@ -1128,10 +1165,12 @@ function render(){
   // --- RESTING panel: chores not due until later.
   // (Completed jobs now live under each kid's column on the right.)
   if (later.length){
-    html += '<div class="panel donep"><div class="phead">🗓 On the Rotation'
-         + '<span class="note">not due yet</span></div><div class="pbody">';
-    {
-      html += '<div class="sub" style="color:#8195b5">NOT DUE YET — ' + later.length + ' on the rotation</div>';
+    html += '<div class="panel donep"><div class="phead rothead" onclick="toggleRotation()">'
+         + (SHOW_LATER ? '▾' : '▸') + ' 🗓 On the Rotation'
+         + '<span class="note">' + later.length + ' not due yet · tap to '
+         + (SHOW_LATER ? 'hide' : 'show') + '</span></div>';
+    if (SHOW_LATER){
+      html += '<div class="pbody">';
       html += grid(later.map(c => {
         const d = c.next_due ? new Date(c.next_due + 'T00:00:00') : null;
         const when = d ? d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'}) : 'later';
@@ -1141,8 +1180,9 @@ function render(){
           + '<div class="badge">' + c.points + ' pts</div></div>'
           + '<div class="when">🗓 Back on the board ' + when + '</div></div>';
       }));
+      html += '</div>';
     }
-    html += '</div></div>';
+    html += '</div>';
   }
 
   // close the left column, add the kid queue panels on the right (Ian on top)
