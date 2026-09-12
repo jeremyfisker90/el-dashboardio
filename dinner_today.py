@@ -9,7 +9,7 @@ import json
 import sys
 import urllib.request
 
-URL = "http://192.168.1.226:5000/lists"
+URL = "http://YOUR_HA_IP:5000/lists"
 TIMEOUT = 15
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 

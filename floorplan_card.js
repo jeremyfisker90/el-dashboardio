@@ -18,7 +18,7 @@ const TITLES = { floor1: "1st Floor", floor2: "2nd Floor", basement: "Lower Leve
 // The six family-room bulbs are listed individually rather than through the
 // light.family_room_lights group, so each one gets its own dot on the model.
 const ROOM_LIGHTS = {
-  "Office": ["light.smart_rgbtw_bulb", "switch.office_overhead"],
+  "Office": ["light.smart_rgbtw_bulb", "switch.office_overhead", "switch.sonoff"],
   "Family Room": ["light.family_room_1", "light.family_room_2", "light.family_room_3",
                   "light.floor_lamp_1", "light.floor_lamp_2", "light.floor_lamp_3",
                   "switch.xmaslightsfamilyroom"],
@@ -52,6 +52,19 @@ const ROOM_MEDIA = {
 const MEDIA_ON = ["playing", "paused", "on", "buffering", "idle"];
 
 function isTv(e) { return /tv|google_?tv|roku|playstation|_avr|denon|insignia/i.test(e); }
+
+// A small fixed palette beats a colour wheel on a wall tablet: eight taps that
+// always land on something usable, with the picker there for anything else.
+const SWATCHES = [
+  { name: "Warm white", rgb: [255, 214, 170] },
+  { name: "Daylight",   rgb: [255, 255, 255] },
+  { name: "Amber",      rgb: [255, 170, 60] },
+  { name: "Red",        rgb: [255, 60, 60] },
+  { name: "Green",      rgb: [80, 230, 120] },
+  { name: "Cyan",       rgb: [60, 220, 240] },
+  { name: "Blue",       rgb: [80, 120, 255] },
+  { name: "Purple",     rgb: [190, 110, 255] },
+];
 
 const THERMO = { room: "Dining Room", floor: "floor1", entity: "climate.nest_thermostat" };
 
@@ -278,6 +291,21 @@ class NeonFloorplanCard extends HTMLElement {
       }
     }
 
+    // Read top-left to bottom-right, the same way the eye crosses the diagram,
+    // so a room's place in the list roughly matches where it sits on the floor.
+    const roomList = [...rooms]
+      .sort((a, b) => (a.y + a.x) - (b.y + b.x))
+      .map(r => {
+        const ents = this._roomLights(r.name);
+        const onN = ents.filter(e => this._isOn(e)).length;
+        return '<button class="nfli' + (ents.length ? "" : " none") + (onN ? " lit" : "") + '"'
+          + ' data-lroom="' + r.name.replace(/"/g, "&quot;") + '">'
+          + '<span class="nflidot"></span>'
+          + '<span class="nfliname">' + r.name + '</span>'
+          + '<span class="nflin">' + (ents.length ? (onN ? onN + "/" + ents.length : ents.length) : "") + '</span>'
+          + '</button>';
+      }).join("");
+
     const tabs = ["floor1", "floor2", "basement"].map(f =>
       '<button class="nftab' + (f === this._floor ? " on" : "") + '" data-floor="' + f + '">' + TITLES[f] + "</button>").join("");
     const onCount = Object.values(lit).reduce((a, l) => a + l.length, 0);
@@ -289,15 +317,33 @@ class NeonFloorplanCard extends HTMLElement {
       + '.nftab{border:1px solid rgba(34,211,238,.4);background:rgba(13,20,44,.7);color:#9fb2d0;'
       + 'border-radius:11px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}'
       + '.nftab.on{background:rgba(34,211,238,.18);color:#7ee7f7;box-shadow:0 0 10px rgba(34,211,238,.3);}'
+      + '.nfsplit{display:flex;align-items:stretch;gap:10px;padding:0 10px 6px;}'
+      + '.nflist{flex:0 0 172px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;'
+      + 'max-height:calc(100vh - 126px);padding-right:2px;}'
+      + '.nfli{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;cursor:pointer;'
+      + 'font-family:inherit;font-size:12.5px;font-weight:800;color:#c7d6ee;text-align:left;'
+      + 'background:rgba(13,20,44,.55);border:1px solid rgba(120,150,190,.22);border-radius:10px;}'
+      + '.nfli:active{filter:brightness(1.15);}'
+      + '.nfli.none{opacity:.38;cursor:default;}'
+      + '.nfli.lit{border-color:' + ACC_SOFT + ';color:#fff3d4;'
+      + 'box-shadow:0 0 10px ' + (ENT ? "rgba(56,189,248,.22)" : "rgba(251,191,36,.22)") + ';}'
+      + '.nflidot{flex:none;width:7px;height:7px;border-radius:50%;background:#41506b;}'
+      + '.nfli.lit .nflidot{background:' + ACC + ';box-shadow:0 0 7px ' + ACC + ';}'
+      + '.nfliname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+      + '.nflin{flex:none;font-size:11px;font-weight:900;color:#8fa6c4;}'
+      + '.nfsplit svg{flex:1;min-width:0;}'
       + '.nfsum{margin-left:auto;font-size:12px;font-weight:800;color:' + (onCount ? (ENT ? "#bae6fd" : "#fde68a") : "#64748b") + ';'
       + (onCount ? "text-shadow:0 0 8px " + ACC_SOFT + ";" : "") + '}'
       + '</style>'
       + '<div class="nfbar">' + tabs + '<span class="nfsum">'
       + (onCount ? (ENT ? "🔊 " + onCount + " playing" : "💡 " + onCount + " light" + (onCount === 1 ? "" : "s") + " on")
                  : (ENT ? "nothing playing" : "all lights off")) + "</span></div>"
-      + '<svg viewBox="0 0 ' + (maxx - minx).toFixed(0) + " " + (maxy - miny).toFixed(0)
-      + '" style="width:100%;height:calc(100vh - 118px);display:block;" xmlns="http://www.w3.org/2000/svg">'
-      + defs + '<g transform="translate(' + (-minx).toFixed(1) + "," + (-miny).toFixed(1) + ')">' + body + "</g></svg>"
+      + '<div class="nfsplit">'
+      +   '<div class="nflist">' + roomList + '</div>'
+      +   '<svg viewBox="0 0 ' + (maxx - minx).toFixed(0) + " " + (maxy - miny).toFixed(0)
+      +   '" style="width:100%;height:calc(100vh - 126px);display:block;" xmlns="http://www.w3.org/2000/svg">'
+      +   defs + '<g transform="translate(' + (-minx).toFixed(1) + "," + (-miny).toFixed(1) + ')">' + body + "</g></svg>"
+      + '</div>'
       + "</ha-card>";
 
     this.querySelectorAll(".nftab").forEach(b =>
@@ -306,6 +352,11 @@ class NeonFloorplanCard extends HTMLElement {
       g.addEventListener("pointerup", ev => {
         ev.stopPropagation();                    // this bulb, not the whole room
         this._hass.callService("homeassistant", "toggle", { entity_id: g.dataset.e });
+      }));
+    this.querySelectorAll("[data-lroom]").forEach(b =>
+      b.addEventListener("pointerup", () => {
+        const ents = this._roomLights(b.dataset.lroom);
+        if (ents.length) this._openPanel(b.dataset.lroom);
       }));
     this.querySelectorAll(".nfroom").forEach(g =>
       g.addEventListener("pointerup", () => {
@@ -356,6 +407,56 @@ class NeonFloorplanCard extends HTMLElement {
     this._panelRoom = null;
   }
 
+  /* A bulb is colour-capable if it says so. hs/xy/rgb all mean "has a hue";
+   * color_temp alone is just warm-to-cool and gets no colour button. */
+  _canColour(e) {
+    const s = this._hass.states[e];
+    if (!s || !e.startsWith("light.")) return false;
+    const modes = s.attributes.supported_color_modes || [];
+    return modes.some(m => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(m));
+  }
+
+  _openColour(entity) {
+    const s = this._hass.states[entity];
+    const cur = s && s.attributes.rgb_color;
+    const wrap = document.createElement("div");
+    wrap.className = "nfpanel-back nfcolour";
+    wrap.innerHTML =
+      '<style>' + NeonFloorplanCard.PANEL_CSS + '</style>' +
+      '<div class="nfpanel"><div class="nfphead">' +
+        '<span class="nfptitle">COLOUR</span>' +
+        '<button class="nfpx" title="Close">&times;</button></div>' +
+        '<div class="nfswatches">' +
+          SWATCHES.map(c =>
+            '<button class="nfsw" data-rgb="' + c.rgb.join(",") + '"' +
+            ' style="background:rgb(' + c.rgb.join(",") + ')" title="' + c.name + '"></button>'
+          ).join("") +
+        '</div>' +
+        '<div class="nfpdim"><span class="nfpicn">🎨</span>' +
+          '<input type="color" class="nfpick" value="' +
+            (cur ? "#" + cur.map(v => v.toString(16).padStart(2, "0")).join("") : "#ffffff") +
+          '"><span class="nfppct">custom</span></div>' +
+      '</div>';
+    const close = () => wrap.remove();
+    wrap.addEventListener("pointerup", e => { if (e.target === wrap) close(); });
+    wrap.querySelector(".nfpx").addEventListener("pointerup", close);
+    wrap.querySelectorAll(".nfsw").forEach(b =>
+      b.addEventListener("pointerup", ev => {
+        ev.stopPropagation();
+        this._hass.callService("light", "turn_on", {
+          entity_id: entity, rgb_color: b.dataset.rgb.split(",").map(Number) });
+        close();
+      }));
+    wrap.querySelector(".nfpick").addEventListener("change", ev => {
+      const h = ev.target.value;
+      this._hass.callService("light", "turn_on", { entity_id: entity, rgb_color: [
+        parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16),
+        parseInt(h.substr(5, 2), 16)] });
+      close();
+    });
+    document.body.appendChild(wrap);
+  }
+
   _paintPanel() {
     if (!this._panel || !this._hass) return;
     const ENT = this._mode === "entertainment";
@@ -385,6 +486,8 @@ class NeonFloorplanCard extends HTMLElement {
           '<span class="nfpdot"></span>' +
           '<span class="nfpname">' + name + '</span>' +
           (ENT ? '<button class="nfppp" data-pp="' + e + '">' + (playing ? "⏸" : "▶") + '</button>' : "") +
+          (!ENT && this._canColour(e)
+            ? '<button class="nfpcol" data-c="' + e + '" title="Change colour">🎨</button>' : "") +
           '<button class="nfptog' + (lit ? " lit" : "") + '" data-t="' + e + '">' +
             (lit ? "ON" : "OFF") + '</button>' +
         '</div>' +
@@ -402,6 +505,11 @@ class NeonFloorplanCard extends HTMLElement {
         b.addEventListener("pointerup", ev => {
           ev.stopPropagation();
           this._hass.callService("homeassistant", "toggle", { entity_id: b.dataset.t });
+        }));
+      rows.querySelectorAll("[data-c]").forEach(b =>
+        b.addEventListener("pointerup", ev => {
+          ev.stopPropagation();
+          this._openColour(b.dataset.c);
         }));
       rows.querySelectorAll("[data-pp]").forEach(b =>
         b.addEventListener("pointerup", ev => {
@@ -484,6 +592,20 @@ NeonFloorplanCard.PANEL_CSS = [
   ".nfpanel.ent .nfpdim input{accent-color:#38bdf8;}",
   ".nfpanel.ent .nfppct{color:#bae6fd;}",
   ".nfpanel.ent .nfpbtn.on{border-color:rgba(56,189,248,.6);color:#bae6fd;}",
+  // colour button sits between the name and the on/off toggle, only on bulbs
+  // that actually have a hue to change
+  ".nfpcol{width:38px;padding:7px 0;border-radius:20px;font-size:14px;cursor:pointer;flex:none;",
+  "background:rgba(2,6,23,.8);border:1px solid rgba(190,110,255,.55);font-family:inherit;}",
+  ".nfpcol:active{filter:brightness(1.2);}",
+  ".nfswatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:4px 0 12px;}",
+  ".nfsw{height:46px;border-radius:12px;cursor:pointer;border:1px solid rgba(255,255,255,.28);",
+  "box-shadow:0 3px 10px rgba(0,0,0,.5);}",
+  ".nfsw:active{transform:translateY(1px);filter:brightness(1.12);}",
+  ".nfcolour .nfpanel{border-color:rgba(190,110,255,.45);",
+  "box-shadow:0 0 40px rgba(190,110,255,.18),0 18px 50px rgba(0,0,0,.7);}",
+  ".nfcolour .nfptitle{color:#e9d5ff;text-shadow:0 0 10px rgba(190,110,255,.55);}",
+  ".nfpick{flex:1;height:34px;padding:0;border:1px solid rgba(190,110,255,.5);",
+  "border-radius:9px;background:rgba(2,6,23,.8);cursor:pointer;}",
 ].join("");
 
 /* furniture dimensions — mirror of the editor's catalog */

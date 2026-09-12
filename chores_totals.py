@@ -8,8 +8,8 @@ import json
 import sys
 import urllib.request
 
-URL = "http://192.168.1.226:5000/chores"
-HIST_URL = "http://192.168.1.226:5000/chores/history"
+URL = "http://YOUR_HA_IP:5000/chores"
+HIST_URL = "http://YOUR_HA_IP:5000/chores/history"
 TIMEOUT = 15
 
 PLACEHOLDER = {

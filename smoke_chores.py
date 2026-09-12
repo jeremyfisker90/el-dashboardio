@@ -12,8 +12,8 @@ import subprocess
 import urllib.request
 
 HARNESS = """
-globalThis.location = {protocol:'http:', hostname:'192.168.1.226',
-                       origin:'http://192.168.1.226'};
+globalThis.location = {protocol:'http:', hostname:'YOUR_HA_IP',
+                       origin:'http://YOUR_HA_IP'};
 const _el = {
   set innerHTML(v){ globalThis.__OUT = v; },
   get innerHTML(){ return globalThis.__OUT || ''; },
@@ -78,7 +78,7 @@ def main():
     src = io.open('chores.html', encoding='utf-8').read()
     js = re.search(r'<script[^>]*>(.*)</script>', src, re.S).group(1)
     payload = json.load(urllib.request.urlopen(
-        'http://192.168.1.226:5000/chores', timeout=30))
+        'http://YOUR_HA_IP:5000/chores', timeout=30))
     checks = CHECKS.replace('__PAYLOAD__', json.dumps(payload))
     io.open('_smoke.js', 'w', encoding='utf-8').write(HARNESS + js + checks)
     r = subprocess.run(['node', '_smoke.js'], capture_output=True, text=True)

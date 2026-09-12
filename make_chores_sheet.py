@@ -17,7 +17,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "Family Chores.xlsx")
-API = "http://192.168.1.226:5000/chores"
+API = "http://YOUR_HA_IP:5000/chores"
 
 HEADERS = ["Chore Title", "Points", "Chore Steps/Details",
            "Type (Required / Optional)", "Frequency"]
@@ -26,7 +26,7 @@ BAND, GREEN, AMBER, GREY = "EEF3FC", "1E7F4C", "B26B00", "6B7A95"
 # The published-sheet URL is a secret (it exposes the whole workbook), so it is
 # never hardcoded here. It is read from the add-on, which already stores it.
 MEALS_CSV = ""
-TRACKER_API = "http://192.168.1.226:5000/meals/tracker"
+TRACKER_API = "http://YOUR_HA_IP:5000/meals/tracker"
 
 
 def _band(ws, first_row, last_row, ncols):
@@ -47,7 +47,7 @@ def live_chores():
     try:
         raw = subprocess.check_output([
             "ssh", "-i", os.path.join(HERE, "keys", "id_ha"),
-            "-o", "StrictHostKeyChecking=no", "root@192.168.1.226",
+            "-o", "StrictHostKeyChecking=no", "root@YOUR_HA_IP",
             "curl -s -m 20 %s" % API], text=True, encoding="utf-8", timeout=60)
         return json.loads(raw).get("chores") or []
     except Exception as exc:
@@ -60,8 +60,8 @@ def _meals_url():
     try:
         raw = subprocess.check_output([
             "ssh", "-i", os.path.join(HERE, "keys", "id_ha"),
-            "-o", "StrictHostKeyChecking=no", "root@192.168.1.226",
-            "curl -s -m 20 http://192.168.1.226:5000/meals"], text=True,
+            "-o", "StrictHostKeyChecking=no", "root@YOUR_HA_IP",
+            "curl -s -m 20 http://YOUR_HA_IP:5000/meals"], text=True,
             encoding="utf-8", timeout=60)
         return json.loads(raw).get("source_url") or ""
     except Exception:
@@ -97,7 +97,7 @@ def live_tracker():
     try:
         raw = subprocess.check_output([
             "ssh", "-i", os.path.join(HERE, "keys", "id_ha"),
-            "-o", "StrictHostKeyChecking=no", "root@192.168.1.226",
+            "-o", "StrictHostKeyChecking=no", "root@YOUR_HA_IP",
             "curl -s -m 20 %s" % TRACKER_API], text=True, encoding="utf-8", timeout=60)
         return json.loads(raw).get("tracker") or []
     except Exception as exc:

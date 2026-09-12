@@ -196,12 +196,11 @@ SCHEDULE_RAIL = {
 # handled by button-card's NATIVE tap_action (action: toggle → cover.toggle),
 # which is reliable on the touch tablet. The custom_field is purely visual and
 # is made non-interactive (pointer-events:none) so every tap reaches the card.
-def garage_btn(ent, label, cat=False):
-    # cat=True adds a third state: the door reads OPEN on the Alarm.com cover but
-    # input_boolean.cat_gap is on, meaning it was cracked deliberately for the
-    # cat. Shown amber with a cat, not red with an alarm.
-    catchk = ("var cg=states['input_boolean.cat_gap'];"
-              "var isCat=open&&cg&&cg.state==='on';" if cat else "var isCat=false;")
+def garage_btn(ent, label):
+    # Both doors read straight off their Alarm.com cover. There used to be a
+    # third "cat gap" state driven by a boolean somebody had to remember to
+    # flip, which meant the tile lied whenever they forgot.
+    catchk = "var isCat=false;"
     js = ("[[["
           + "var s=states['%s'];var st=s?s.state:'unknown';" % ent
           + "var open=(st==='open'||st==='opening');"
@@ -233,7 +232,7 @@ def garage_btn(ent, label, cat=False):
             "show_icon": False, "show_name": False, "show_state": False,
             # native toggle — button-card fires cover.toggle on tap (touch-safe)
             "tap_action": {"action": "toggle"},
-            "triggers_update": ([ent, "input_boolean.cat_gap"] if cat else [ent]),
+            "triggers_update": [ent],
             "custom_fields": {"b": js},
             "styles": {
                 "card": [{"background": "none"}, {"box-shadow": "none"},
@@ -241,31 +240,6 @@ def garage_btn(ent, label, cat=False):
                 "grid": [{"grid-template-areas": '"b"'}],
                 "custom_fields": {"b": [{"width": "100%"}]}}}
 
-
-# Small toggle so the 1-car door can be flagged as "cracked for the cat"
-# instead of reading as a plain OPEN alarm. Replace this with a real position
-# sensor when one is installed — see the notes in the README.
-CAT_TOGGLE = {
-    "type": "custom:button-card", "entity": "input_boolean.cat_gap",
-    "show_icon": False, "show_name": False, "show_state": False,
-    "tap_action": {"action": "toggle"},
-    "triggers_update": ["input_boolean.cat_gap"],
-    "custom_fields": {"c": (
-        "[[["
-        "var o=states['input_boolean.cat_gap'];var on=o&&o.state==='on';"
-        "var col=on?'#fbbf24':'#64748b';"
-        "return '<div style=\"pointer-events:none;display:flex;align-items:center;justify-content:center;"
-        "gap:6px;height:30px;border-radius:10px;background:'+(on?'rgba(251,191,36,0.16)':'rgba(255,255,255,0.04)')+';"
-        "border:1px solid '+col+(on?'aa':'55')+';\">'"
-        "+'<span style=\"font-size:13px;filter:'+(on?'none':'grayscale(1) opacity(0.6)')+';\">\\uD83D\\uDC08</span>'"
-        "+'<span style=\"font-size:10px;font-weight:900;letter-spacing:1px;color:'+col+';\">'"
-        "+(on?'CAT GAP ON':'CAT GAP OFF')+'</span></div>';"
-        "]]]")},
-    "styles": {"card": [{"background": "none"}, {"box-shadow": "none"},
-                        {"border": "none"}, {"padding": "0"}],
-               "grid": [{"grid-template-areas": '"c"'}],
-               "custom_fields": {"c": [{"width": "100%"}]}},
-}
 
 GARAGE_HEADER = {
     "type": "custom:button-card", "name": "Garage", "icon": "mdi:garage-variant",
@@ -290,7 +264,7 @@ GARAGE_BLOCK = {
         "padding:6px 8px 4px!important;overflow:hidden;}" % (bd(GREEN, "0.55"), glow(GREEN, "0.30"))},
     "cards": [GARAGE_HEADER,
               garage_btn("cover.2_car_garage", "2 Car Garage"),
-              garage_btn("cover.1_car_garage", "1 Car Garage", cat=True)],
+              garage_btn("cover.1_car_garage", "1 Car Garage")],
 }
 SCHEDULE_RAIL["cards"].append(GARAGE_BLOCK)
 
@@ -683,7 +657,7 @@ LIGHT_MENU_JS = """[[[
     + '<div style="display:flex;flex-direction:column;align-items:center;flex:none;width:62px;">'
     +   '<ha-icon icon="mdi:lightbulb-group" style="--mdc-icon-size:27px;color:#60a5fa;'
     +     'filter:drop-shadow(0 0 6px rgba(96,165,250,0.9));"></ha-icon>'
-    +   '<div style="font-size:10px;font-weight:700;color:#f8fafc;margin-top:2px;">Lighting</div>'
+    +   '<div style="font-size:10px;font-weight:700;color:#f8fafc;margin-top:2px;">Smart</div>'
     + '</div>'
     + '<div style="flex:1;text-align:center;">' + line + '</div>'
     + '</div>';
