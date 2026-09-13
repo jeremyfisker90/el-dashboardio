@@ -141,6 +141,33 @@
            background:rgba(10,16,36,.55); border:1px solid rgba(34,211,238,.35);
            box-shadow:0 0 16px rgba(34,211,238,.10), 0 6px 18px rgba(0,0,0,.45); }
   .panel.donep { border-color:rgba(143,176,232,.28); box-shadow:0 6px 18px rgba(0,0,0,.45); }
+
+  /* ---- UNIFIED SHELL -------------------------------------------------
+     Six stacked sections each had their own chrome: green header, yellow
+     header, purple marquee, a bare toggle button, a link bar. One panel
+     style and one tab bar replaces all of it. Section-specific colour now
+     lives only on the tab's accent, never on the panel itself. */
+  .shell { display:flex; flex-direction:column; gap:10px; }
+  .score { display:flex; align-items:center; gap:14px; margin-left:auto; }
+  .score .s { display:flex; align-items:baseline; gap:5px; font-weight:800;
+              font-size:13px; letter-spacing:.3px; }
+  .score .s b { font-size:17px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tab { display:flex; align-items:center; gap:7px; padding:9px 15px;
+         border-radius:10px 10px 0 0; border:1px solid rgba(148,163,184,.22);
+         border-bottom:none; background:rgba(15,23,42,.6); color:#94a3b8;
+         font:inherit; font-weight:800; font-size:12px; letter-spacing:.7px;
+         text-transform:uppercase; cursor:pointer; transition:all .12s; }
+  .tab:hover { color:#e2e8f0; background:rgba(30,41,59,.75); }
+  .tab.on { color:#e2e8f0; background:rgba(30,41,59,.95);
+            border-color:var(--tc,#38bdf8); box-shadow:inset 0 2px 0 var(--tc,#38bdf8); }
+  .tab .cnt { min-width:19px; padding:1px 6px; border-radius:9px; font-size:11px;
+              background:rgba(148,163,184,.2); color:#cbd5e1; }
+  .tab.on .cnt { background:var(--tc,#38bdf8); color:#0b1120; }
+  .tab .cnt.zero { display:none; }
+  /* every panel now looks the same - no per-section gradients */
+  .panel.donep .phead, .panel.awaitp .phead { background:linear-gradient(180deg,
+      rgba(148,163,184,.16), rgba(148,163,184,.04)) !important; }
   .phead { display:flex; align-items:center; gap:10px; padding:9px 14px;
            font-size:13.5px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
            background:linear-gradient(180deg, rgba(34,211,238,.30), rgba(34,211,238,.08));
@@ -1136,10 +1163,26 @@ function closeRoom(){ OPEN_ROOM = null; render(); }
 let QUEUE_WHO = null;
 function pickQueue(k){ QUEUE_WHO = (QUEUE_WHO === k) ? null : k; render(); }
 
+// Which tab is showing. Lives outside render() because render() rebuilds the
+// whole board on every poll and would otherwise snap back to the default.
+let TAB = 'board';
+function setTab(t){ TAB = t; render(); }
+
 function render(){
   const t = D.target || 100, tot = D.totals || {ian:0,evan:0};
+  // Header carries the scoreboard ONCE. It used to appear twice - in the
+  // Completed Jobs toggle and again in the queue bar, forty pixels apart.
+  const pendTagH = k => { const pp = (D.pending || {})[k] || 0;
+                          return pp ? ' <em class="pendpts">+' + pp + '</em>' : ''; };
+  const sc = (k, label, colour) =>
+    '<span class="s" style="color:' + colour + '">' + label
+    + ' <b>' + (tot[k] || 0) + '</b>' + pendTagH(k) + '</span>';
   let html = '<div class="hdr"><div class="title">⭐ Chores &amp; Points</div>'
+    + '<div class="score">' + sc('ian','Ian','#2dd4bf') + sc('evan','Evan','#fbbf24')
+    +   sc('parent','Parents','#d8b4fe') + '</div>'
     + '<button class="btn blue" onclick="openForm()">+ Add Chore</button>'
+    + '<button class="btn ghost" onclick="adhocChore()">🎯 Ad-Hoc</button>'
+    + '<button class="btn ghost" onclick="openCasino()">🎰 Casino</button>'
     + '<button class="btn ghost" onclick="newWeek()">↻ New Week</button></div>'
     + formHtml();
 
@@ -1327,20 +1370,28 @@ function render(){
 
   // parent-only: drop a one-off "ad-hoc" chore straight into a kid's queue
   // Completed work, all three people, behind one button. Off by default so the
-  // board opens on what still needs doing.
+  // ---- ONE TAB BAR. Everything below renders into a single panel body, so
+  // Board / Queue / Approvals / Done all look and behave identically.
+  const totalDone = ((D.log||{}).ian||[]).length + ((D.log||{}).evan||[]).length
+                  + ((D.log||{}).parent||[]).length;
+  const qTotal = qIan.length + qEvan.length + qParent.length + pend.length;
   {
-    const totalDone = ((D.log||{}).ian||[]).length + ((D.log||{}).evan||[]).length
-                    + ((D.log||{}).parent||[]).length;
-    html += '<button class="neon lit done-btn' + (SHOW_DONE ? ' on' : '') + '" onclick="toggleCompleted()">'
-         +   '<span>' + (SHOW_DONE ? '▾' : '▸') + ' ✅ Completed Jobs</span>'
-         +   '<span class="db-tot">'
-         +     '<span style="color:#2dd4bf">Ian ' + (tot.ian||0) + pendTag('ian') + '</span>'
-         +     '<span style="color:#fbbf24">Evan ' + (tot.evan||0) + pendTag('evan') + '</span>'
-         +     '<span style="color:#d8b4fe">Parents ' + (tot.parent||0) + pendTag('parent') + '</span>'
-         +   '</span>'
-         + '</button>';
+    const tb = (id, icon, label, n, colour) =>
+      '<button class="tab' + (TAB === id ? ' on' : '') + '" style="--tc:' + colour + '"'
+      + ' onclick="setTab(&#39;' + id + '&#39;)">' + icon + ' ' + label
+      + '<span class="cnt' + (n ? '' : ' zero') + '">' + n + '</span></button>';
+    html += '<div class="tabs">'
+         +   tb('board',     '📋', 'Board',     board.length,    '#38bdf8')
+         +   tb('queue',     '🧺', 'Queue',     qTotal,          '#2dd4bf')
+         +   tb('approvals', '⏳', 'Approvals', awaiting.length, '#fbbf24')
+         +   tb('done',      '✅', 'Done',      totalDone,       '#d8b4fe')
+         + '</div>';
+  }
 
-    if (SHOW_DONE){
+  // ---- DONE TAB
+  if (TAB === 'done') {
+
+    {
       // A parent still needs undo/reject on today's work, so live chore cards
       // render above the week's banked rows rather than instead of them.
       const section = (key, label, colour) => {
@@ -1376,8 +1427,8 @@ function render(){
   }
 
 
-  // --- WHOSE QUEUE: three links, full width. Picking one opens it below.
-  {
+  // ---- QUEUE TAB
+  if (TAB === 'queue') {
     const qc = {ian: qIan.length + pend.filter(c=>c.kid==='ian').length,
                 evan: qEvan.length + pend.filter(c=>c.kid==='evan').length,
                 parent: qParent.length};
@@ -1385,7 +1436,6 @@ function render(){
       '<button class="qlink' + (QUEUE_WHO === k ? ' on' : '') + '"'
       + ' style="--qc:' + colour + '" onclick="pickQueue(&#39;' + k + '&#39;)">'
       +   '<span class="ql-name">' + label + '</span>'
-      +   '<span class="ql-pts">' + (tot[k] || 0) + pendTag(k) + '</span>'
       +   '<span class="ql-n">' + qc[k] + ' in queue</span>'
       + '</button>';
     html += '<div class="neon lit qbar">'
@@ -1399,22 +1449,14 @@ function render(){
     if (QUEUE_WHO === 'parent') html += parentPanel();
   }
 
-  html += '<button class="neon lit adhoc-btn" onclick="adhocChore()">🎯 Ad-Hoc Chore Addition</button>';
-
-  // the big flashing casino marquee — tap to enter (code-gated inside)
-  html += '<button class="casino-marquee" onclick="openCasino()">'
-       +   '<span class="cm-bulbs"></span>'
-       +   '<span class="cm-inner"><span class="cm-ico">🎰</span>'
-       +     '<span class="cm-txt"><span class="cm-title">THE CHORE CASINO</span>'
-       +       '<span class="cm-sub">The house wins <b>75%</b> of the time · tap to enter</span></span>'
-       +     '<span class="cm-ico"><span class="ledchip big spin">P</span></span></span>'
-       + '</button>';
+  // Ad-Hoc and Casino are header buttons now - they were a full-width bar and
+  // a marquee slab sitting in the middle of the workflow.
 
   // ===== one full-width column: approvals, then the board =====
 
 
   // --- AWAITING APPROVAL: sits above everything until a parent clears it ---
-  if (awaiting.length){
+  if (TAB === 'approvals' && awaiting.length){
     const ap = awaiting.slice()
       .sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
     const apPts = ap.reduce((s,c)=>s+(parseInt(c.points)||0),0);
@@ -1427,7 +1469,8 @@ function render(){
          + '</div></div>';
   }
 
-  // --- JOB BOARD panel: everything still up for grabs ---
+  // ---- BOARD TAB
+  if (TAB === 'board') {
   html += '<div class="panel"><div class="phead">📋 Job Board'
        + '<span class="note">' + board.length + ' open · tap a job to queue it</span></div>'
        + '<div class="pbody">';
@@ -1510,6 +1553,7 @@ function render(){
     }
   }
   html += '</div></div>';
+  }
 
   // --- RESTING panel: chores not due until later.
   // (Completed jobs now live under each kid's column on the right.)
