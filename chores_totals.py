@@ -71,6 +71,12 @@ def main():
             d = json.loads(r.read().decode("utf-8"))
         tot = d.get("totals") or {}
         chores = d.get("chores") or []
+        # The queue/approval cycle lives on claims now, not on the chore rows.
+        # A chore never leaves the board, so its own done_by/queued_for/rejected
+        # fields no longer describe who owes what - these three attributes read
+        # the claims instead.
+        claims = d.get("claims") or []
+        queued = [c for c in claims if c.get("state") == "queued"]
         out.update({
             "ok": True,
             "ian": int(tot.get("ian", 0)),
@@ -89,20 +95,19 @@ def main():
             "done_evan": len([c for c in chores if c.get("done_by") == "evan"]),
             "pts_open": sum(int(c.get("points", 0)) for c in chores
                             if not c.get("done_by") and c.get("posted") is not False),
-            "pending": len([c for c in chores
-                            if c.get("rejected") and not c.get("done_by")]),
+            # A parent sent it back with a note and it is waiting to be redone.
+            # /chores/reject is the only thing that sets `rejected`, and it puts
+            # the claim back to queued; done, approve, reassign, clear_rejection
+            # and the Monday roll all drop the key. So this is exactly the set of
+            # FIX cards, which is what the red "N CHORES TO FIX" pill counts.
+            "pending": len([c for c in queued if c.get("rejected")]),
             # jobs sitting in each kid's queue (rejected redos count too)
-            "queued_ian": len([c for c in chores if not c.get("done_by")
-                               and (c.get("queued_for") == "ian"
-                                    or (c.get("rejected") or {}).get("kid") == "ian")]),
-            "queued_evan": len([c for c in chores if not c.get("done_by")
-                                and (c.get("queued_for") == "evan"
-                                     or (c.get("rejected") or {}).get("kid") == "evan")]),
+            "queued_ian": len([c for c in queued if c.get("kid") == "ian"]),
+            "queued_evan": len([c for c in queued if c.get("kid") == "evan"]),
         })
         # Claims a kid marked done that no parent has signed off. The add-on drops
         # these at the Monday roll with no points, which is what the Sunday 10pm
         # reminder to the parents is for.
-        claims = d.get("claims") or []
         labels = {"ian": "Ian", "evan": "Evan", "parent": "Parent"}
         wait = [c for c in claims if c.get("state") == "done"]
         out["awaiting"] = len(wait)
@@ -110,7 +115,7 @@ def main():
         out["awaiting_list"] = ["%s: %s (%d)" % (labels.get(c.get("kid"), c.get("kid", "?")),
                                                  c.get("name", "?"), int(c.get("points", 0)))
                                 for c in wait]
-        out["unfinished"] = len([c for c in claims if c.get("state") == "queued"])
+        out["unfinished"] = len(queued)
         out["leader"] = ("ian" if out["ian"] > out["evan"]
                          else "evan" if out["evan"] > out["ian"] else "")
         sk, sw, hi, he, hw, last = hist_stats()
