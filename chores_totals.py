@@ -22,6 +22,7 @@ PLACEHOLDER = {
     "last_kid": "", "last_ian": 0, "last_evan": 0, "last_week_start": "",
     "total_ian": 0, "total_evan": 0, "total_weeks": 1,
     "pending": 0, "queued_ian": 0, "queued_evan": 0,
+    "awaiting": 0, "awaiting_pts": 0, "awaiting_list": [], "unfinished": 0,
 }
 
 
@@ -98,6 +99,18 @@ def main():
                                 and (c.get("queued_for") == "evan"
                                      or (c.get("rejected") or {}).get("kid") == "evan")]),
         })
+        # Claims a kid marked done that no parent has signed off. The add-on drops
+        # these at the Monday roll with no points, which is what the Sunday 10pm
+        # reminder to the parents is for.
+        claims = d.get("claims") or []
+        labels = {"ian": "Ian", "evan": "Evan", "parent": "Parent"}
+        wait = [c for c in claims if c.get("state") == "done"]
+        out["awaiting"] = len(wait)
+        out["awaiting_pts"] = sum(int(c.get("points", 0)) for c in wait)
+        out["awaiting_list"] = ["%s: %s (%d)" % (labels.get(c.get("kid"), c.get("kid", "?")),
+                                                 c.get("name", "?"), int(c.get("points", 0)))
+                                for c in wait]
+        out["unfinished"] = len([c for c in claims if c.get("state") == "queued"])
         out["leader"] = ("ian" if out["ian"] > out["evan"]
                          else "evan" if out["evan"] > out["ian"] else "")
         sk, sw, hi, he, hw, last = hist_stats()

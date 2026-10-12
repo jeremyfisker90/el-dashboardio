@@ -85,6 +85,11 @@
   .claim .ian  { background:#2dd4bf; box-shadow:0 0 12px rgba(45,212,191,.45); }
   .claim .evan { background:#fbbf24; box-shadow:0 0 12px rgba(251,191,36,.45); }
   .claim .approve { background:#22c55e; box-shadow:0 0 12px rgba(34,197,94,.45); }
+/* Bulk accept: sits above the individual cards, deliberately wider and louder
+   than a per-chore button so it reads as "this clears the whole list". */
+.claim.approveallwrap { margin:0 0 12px; }
+.claim .approveall { padding:14px; font-size:17px; letter-spacing:.4px;
+  box-shadow:0 0 16px rgba(34,197,94,.55); }
   .chore.pending { border:1px solid rgba(244,63,94,.5); border-left:6px solid #f43f5e;
                    box-shadow:0 0 14px rgba(244,63,94,.18), 0 4px 14px rgba(0,0,0,.45); }
   .pill.fix { background:rgba(244,63,94,.16); color:#ffb4c2; border:1px solid rgba(244,63,94,.5); }
@@ -779,18 +784,18 @@
               align-items:start; }
   .roomcols.solo { grid-template-columns:1fr; }
 
-  .joblist { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr));
-             gap:6px; }
-  .jobrow { display:flex; align-items:center; gap:9px; width:100%; padding:9px 11px;
+  .joblist { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr));
+             gap:10px; }
+  .jobrow { display:flex; align-items:center; gap:12px; width:100%; padding:15px 17px;
             font-family:inherit; text-align:left; cursor:pointer; color:#e8f0ff;
-            background:rgba(255,255,255,0.028); border-radius:10px;
-            border:1px solid rgba(140,170,215,0.16); border-left:3px solid #8fa6c4; }
+            background:rgba(255,255,255,0.028); border-radius:13px;
+            border:1px solid rgba(140,170,215,0.16); border-left:5px solid #8fa6c4; }
   .jobrow:active { filter:brightness(1.12); transform:translateY(1px); }
   .jobrow.is-daily { border-left-color:#7dd3fc; }
   .jobrow.is-req   { border-left-color:#ff9a6b; }
   .jobrow.is-opt   { border-left-color:#5fe0c6; }
-  .jr-name { flex:1; font-size:13.5px; font-weight:800; }
-  .jr-pts  { flex:none; font-size:14px; font-weight:900; color:#ffd76e; }
+  .jr-name { flex:1; font-size:18px; font-weight:800; line-height:1.25; }
+  .jr-pts  { flex:none; font-size:20px; font-weight:900; color:#ffd76e; }
 
   /* ---- the chore popup ---- */
   .jobbox { width:min(430px,94vw); text-align:left; }
@@ -800,6 +805,26 @@
              color:#cbd5e1; background:rgba(255,255,255,0.03); border-radius:10px;
              border:1px solid rgba(140,170,215,0.16); }
   .jobheld { margin:10px 0 0; font-size:12px; font-weight:800; color:#fbbf24; }
+  /* ---- dishwasher-done alert: deliberately the loudest thing on the board ---- */
+  .dishbox { width:min(560px,96vw); text-align:center;
+    background:radial-gradient(130% 90% at 50% 0%, #0e7490 0%, #0b4a63 32%, #10233f 72%, #05080f 100%);
+    border-color:#22d3ee;
+    box-shadow:0 0 60px rgba(34,211,238,.45),0 0 110px rgba(56,189,248,.28),inset 0 0 60px rgba(0,0,0,.6); }
+  .dishbox::before { background-image:radial-gradient(circle,#fff 1.5px,#22d3ee 2.5px,transparent 3.3px); }
+  .dishbox .dishico { font-size:54px; line-height:1; margin:4px 0 6px;
+    filter:drop-shadow(0 0 14px rgba(34,211,238,.85)); animation:dishpulse 1.6s ease-in-out infinite; }
+  @keyframes dishpulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.09)} }
+  .dishbox .dishsign { font-size:clamp(24px,6.4vw,36px); font-weight:900; letter-spacing:1.5px;
+    line-height:1.12; color:#ecfeff; text-shadow:0 0 20px rgba(34,211,238,.95),0 0 46px rgba(34,211,238,.55); }
+  .dishbox .dishsub { margin:11px 0 3px; font-size:14px; font-weight:700; color:#a5f3fc; }
+  .dishbox .dishwhen { font-size:12px; font-weight:700; color:#7dd3fc; opacity:.85; }
+  .dishaccept { display:block; width:100%; margin:18px 0 0; padding:17px 14px; border:none;
+    border-radius:14px; font-size:18px; font-weight:900; letter-spacing:1px; cursor:pointer;
+    color:#04252e; background:linear-gradient(180deg,#67e8f9,#22d3ee 60%,#0891b2);
+    box-shadow:0 6px 0 #075985,0 0 26px rgba(34,211,238,.6); }
+  .dishaccept:active { transform:translateY(3px); box-shadow:0 3px 0 #075985,0 0 18px rgba(34,211,238,.5); }
+  .dishlater { margin:11px 0 0; background:none; border:none; cursor:pointer;
+    font-size:12px; font-weight:800; letter-spacing:.6px; color:#7dd3fc; text-decoration:underline; }
   .jobacts { display:flex; gap:7px; margin-top:13px; flex-wrap:wrap; }
   .jobacts.sm { margin-top:9px; justify-content:flex-end; }
   .jobacts button { flex:1 1 110px; padding:10px 12px; font-family:inherit;
@@ -810,6 +835,218 @@
   .jobacts .evan   { color:#fbbf24; border-color:#fbbf2466; background:rgba(251,191,36,.10); }
   .jobacts .parent { color:#d8b4fe; border-color:#d8b4fe66; background:rgba(216,180,254,.10); }
   .jobacts .taken  { opacity:.45; cursor:default; }
+
+  /* ================= JOB BOARD : hero, status, modular menu ================= */
+  .jbhero { position:relative; overflow:hidden; margin:0 0 13px; padding:20px 18px 17px;
+            border-radius:16px; border:1px solid rgba(34,211,238,.38);
+            background:radial-gradient(125% 150% at 50% -25%, #0d3busercontent 0%, #071726 55%, #050b16 100%);
+            background:radial-gradient(125% 150% at 50% -25%, #0b2b40 0%, #071726 55%, #050b16 100%); }
+  .jbhero::before { content:''; position:absolute; left:-10%; right:-10%; bottom:-45%; height:80%;
+            background-image:linear-gradient(rgba(34,211,238,.28) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(34,211,238,.28) 1px, transparent 1px);
+            background-size:100% 20px, 38px 100%;
+            transform:perspective(200px) rotateX(63deg); transform-origin:50% 0;
+            opacity:.5; pointer-events:none; }
+  .jbhero::after { content:''; position:absolute; top:-60%; width:55%; height:230%;
+            background:linear-gradient(90deg, transparent, rgba(255,255,255,.075), transparent);
+            transform:rotate(17deg); pointer-events:none; animation:jbsheen 8s linear infinite; }
+  @keyframes jbsheen { 0%{left:-45%} 55%{left:125%} 100%{left:125%} }
+  .jbhero-in { position:relative; z-index:2; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .jbtitle { font-size:42px; line-height:1; font-weight:900; letter-spacing:6px; margin:0;
+             color:#eafcff; text-shadow:0 0 8px #22d3ee, 0 0 28px rgba(34,211,238,.75),
+                                        0 0 58px rgba(34,211,238,.35); }
+  .jbsub { margin-top:7px; font-size:11.5px; font-weight:800; letter-spacing:2.6px;
+           text-transform:uppercase; color:#7dd3fc; opacity:.85; }
+  .jbart { width:104px; height:84px; margin-left:auto; flex:none; }
+
+  /* ---- status strip, fused to the bottom edge of the hero ---- */
+  .jbstrip { position:relative; z-index:2; display:flex; flex-wrap:wrap;
+             margin:17px -18px -17px; border-top:1px solid rgba(34,211,238,.26);
+             background:rgba(3,10,20,.55); border-radius:0 0 15px 15px; }
+  .jbs { position:relative; flex:1 1 0; min-width:180px; display:flex;
+         align-items:baseline; gap:8px; padding:12px 18px 13px;
+         border-left:1px solid rgba(148,163,184,.13); }
+  .jbs:first-child { border-left:none; }
+  .jbs::before { content:''; position:absolute; left:0; right:0; bottom:0; height:3px;
+                 background:rgb(var(--pcr)); box-shadow:0 0 14px rgb(var(--pcr)); }
+  .jbs .who  { font-size:12px; font-weight:900; letter-spacing:1.6px;
+               text-transform:uppercase; color:rgb(var(--pcr)); }
+  .jbs .num  { font-size:26px; font-weight:900; line-height:1; color:#f1f8ff; }
+  .jbs .u    { font-size:10px; font-weight:800; letter-spacing:1.2px; opacity:.6; }
+  .jbs .pend { font-size:11px; font-weight:800; color:#fbbf24; }
+  .jbs .jobs { margin-left:auto; font-size:11.5px; font-weight:800;
+               letter-spacing:.4px; color:#cbd5e1; }
+  .jbs .jobs b { color:rgb(var(--pcr)); }
+
+  /* ---- main menu: six big buttons, 3 across x 2 rows ---- */
+  .jbtabs { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:0 0 16px; }
+  .jbtab { position:relative; overflow:hidden; cursor:pointer; font-family:inherit;
+           display:flex; align-items:center; justify-content:center; gap:10px;
+           min-height:70px; padding:12px 18px; border:none; border-radius:999px;
+           color:#fff; text-align:center;
+           background:linear-gradient(180deg, rgb(var(--g1)) 0%, rgb(var(--g2)) 100%);
+           box-shadow:0 9px 24px -9px rgb(var(--g1)),
+                      inset 0 1px 0 rgba(255,255,255,.5),
+                      inset 0 -3px 8px rgba(0,0,0,.28);
+           transition:transform .1s ease, filter .18s ease, box-shadow .18s ease; }
+  .jbtab::after { content:''; position:absolute; left:0; right:0; top:0; height:50%;
+                  border-radius:999px 999px 40% 40%;
+                  background:linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,0));
+                  pointer-events:none; }
+  .jbtab .ti { position:absolute; inset:0; display:grid; place-items:center;
+               font-size:74px; line-height:1; opacity:.17; pointer-events:none;
+               filter:drop-shadow(0 3px 7px rgba(0,0,0,.45)); }
+  .jbtab .tl { position:relative; z-index:2; font-size:15px; font-weight:900;
+               letter-spacing:.3px; line-height:1.15;
+               text-shadow:0 1px 4px rgba(0,0,0,.5); }
+  .jbtab .tn { position:relative; z-index:2; flex:none; min-width:22px; padding:3px 10px;
+               border-radius:999px; font-size:12px; font-weight:900;
+               color:rgb(var(--g2)); background:rgba(255,255,255,.92);
+               box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .jbtab .tn.zero { opacity:.55; }
+  .jbtab:active { transform:translateY(2px); filter:brightness(1.1); }
+  .jbtab.on { filter:brightness(1.07);
+              box-shadow:0 0 0 3px rgba(255,255,255,.85),
+                         0 12px 30px -8px rgb(var(--g1)),
+                         inset 0 1px 0 rgba(255,255,255,.55),
+                         inset 0 -3px 8px rgba(0,0,0,.28); }
+  .jbtab.on .tl { text-shadow:0 1px 5px rgba(0,0,0,.6); }
+  .jbtab.act::before { content:'\25B8'; position:absolute; right:16px; z-index:2;
+                       font-size:13px; opacity:.85; }
+
+  /* ---- the live module tints everything inside it ---- */
+  .modwrap { border-radius:15px; padding:11px; margin-bottom:12px;
+             border:1px solid rgba(var(--mcr),.38);
+             background:linear-gradient(180deg, rgba(var(--mcr),.07), transparent 62%); }
+  .modbanner { display:flex; align-items:center; gap:10px; margin:0 0 11px; padding:10px 14px;
+               border-radius:11px; font-size:13px; font-weight:900; letter-spacing:1.5px;
+               text-transform:uppercase; color:#08121f; background:rgb(var(--mcr));
+               box-shadow:0 0 24px -7px rgb(var(--mcr)); }
+  .modbanner .mb-note { margin-left:auto; font-size:10.5px; font-weight:800;
+                        letter-spacing:.4px; text-transform:none; opacity:.78; }
+  .modwrap .panel, .modwrap .kpanel { border-color:rgba(var(--mcr),.4) !important; }
+
+  /* Below ~1150 the six labels stop fitting on one line. Rather than let them
+     wrap 5+1 or 4+2, give each a 30% basis so they break cleanly to 3 + 3. */
+  @media (max-width:760px){
+    .jbtabs { grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width:860px){
+    .jbtitle { font-size:32px; letter-spacing:4px; }
+    .jbart { width:82px; height:66px; }
+  }
+  @media (max-width:540px){
+    .jbart { display:none; }
+    .jbs { flex:1 1 100%; border-left:none;
+           border-top:1px solid rgba(148,163,184,.13); }
+    .jbtabs { grid-template-columns:1fr; }
+    .jbtab { min-height:60px; }
+  }
+  .jbnew { margin-left:14px; flex:none; align-self:flex-start; }
+  @media (max-width:540px){ .jbnew { margin-left:0; margin-top:10px; } }
+  /* ---- a module fills the screen instead of sitting below the fold ---- */
+  .modov { position:fixed; inset:0; z-index:9000; display:flex; flex-direction:column;
+           background:linear-gradient(180deg, #060d1a 0%, #04080f 100%);
+           animation:modovin .16s ease-out; }
+  @keyframes modovin { from { opacity:0; transform:scale(.99); } to { opacity:1; transform:none; } }
+  .modov-head { flex:none; display:flex; align-items:center; gap:12px;
+                padding:15px 20px; color:#08121f; background:rgb(var(--mcr));
+                box-shadow:0 6px 26px -8px rgb(var(--mcr)); }
+  .modov-head .mo-icon  { font-size:26px; line-height:1; }
+  .modov-head .mo-title { font-size:19px; font-weight:900; letter-spacing:1.4px;
+                          text-transform:uppercase; }
+  .modov-head .mo-note  { font-size:12px; font-weight:800; opacity:.78; }
+  .modov-x { margin-left:auto; flex:none; width:44px; height:44px; border:none;
+             border-radius:50%; cursor:pointer; font-size:20px; font-weight:900;
+             color:#08121f; background:rgba(255,255,255,.35);
+             transition:background .15s ease; }
+  .modov-x:active { background:rgba(255,255,255,.6); }
+  /* only the body scrolls - the header and close button never move */
+  /* bottom padding clears the fixed Back to Job Board pill so the last row
+     of content can still be scrolled clear of it */
+  .modov-body { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+                padding:16px 18px 130px; }
+  .modov-back { position:fixed; left:12px; bottom:66px; z-index:9100;
+                display:flex; align-items:center; justify-content:center; gap:7px;
+                width:170px; height:46px; border-radius:23px; cursor:pointer;
+                font-family:inherit; font-size:14px; font-weight:800; letter-spacing:.2px;
+                color:#08121f; background:rgb(var(--mcr));
+                border:1px solid rgba(255,255,255,.6);
+                box-shadow:0 0 18px -2px rgb(var(--mcr)), 0 6px 16px rgba(0,0,0,.55);
+                transition:filter .15s ease, transform .1s ease; }
+  .modov-back .mb-arrow { font-size:17px; line-height:1; }
+  .modov-back:active { filter:brightness(1.12); transform:translateY(1px); }
+  .modov-body > .panel, .modov-body > .kpanel { margin-bottom:12px; }
+  @media (max-width:540px){
+    .modov-head { padding:12px 14px; gap:9px; }
+    .modov-head .mo-title { font-size:16px; letter-spacing:1px; }
+    .modov-head .mo-note { display:none; }
+    .modov-body { padding:12px 12px 22px; }
+  }
+
+  /* ---- PRIOR WEEK REPORT ---- */
+  .jbtab.jbreport { grid-column:1 / -1; }
+  .rpt-top { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 12px; }
+  .rpt-who { display:flex; gap:8px; flex-wrap:wrap; }
+  .rpt-who button { font:inherit; font-size:15px; font-weight:900; letter-spacing:.4px;
+                    padding:10px 20px; border-radius:999px; cursor:pointer;
+                    color:var(--pc); background:rgba(255,255,255,.04);
+                    border:2px solid color-mix(in srgb, var(--pc) 55%, transparent); }
+  .rpt-who button.on { color:#08121f; background:var(--pc);
+                       box-shadow:0 0 18px -4px var(--pc); }
+  .rpt-week { display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .rpt-week button { font:inherit; font-size:13px; font-weight:800; padding:8px 13px;
+                     border-radius:10px; cursor:pointer; color:#e2e8f0;
+                     background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.18); }
+  .rpt-week button:disabled { opacity:.3; cursor:default; }
+  .rpt-week .wk { font-size:14px; font-weight:900; color:#f1f5f9; white-space:nowrap; }
+  .rpt-week .wk small { display:block; font-size:10.5px; font-weight:800; letter-spacing:1px;
+                        color:#94a3b8; text-transform:uppercase; text-align:center; }
+  .rpt-sum { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+             gap:10px; margin:0 0 12px; }
+  .rpt-sum .c { border-radius:12px; padding:10px 13px; background:rgba(255,255,255,.05);
+                border:1px solid rgba(255,255,255,.12); }
+  .rpt-sum .c b { display:block; font-size:24px; font-weight:900; line-height:1.1; }
+  .rpt-sum .c span { font-size:11px; font-weight:800; letter-spacing:.8px;
+                     text-transform:uppercase; color:#94a3b8; }
+  .rpt-sum .ok b { color:#4ade80; } .rpt-sum .warn b { color:#fbbf24; }
+  .rpt-sum .bad b { color:#f87171; }
+  .rpt-check { margin:0 0 12px; padding:9px 13px; border-radius:10px; font-size:13px;
+               font-weight:800; }
+  .rpt-check.ok { color:#86efac; background:rgba(74,222,128,.10); border:1px solid rgba(74,222,128,.35); }
+  .rpt-check.bad { color:#fca5a5; background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.45); }
+  .rpt-note { margin:0 0 12px; padding:9px 13px; border-radius:10px; font-size:13px;
+              color:#fde68a; background:rgba(251,191,36,.10); border:1px solid rgba(251,191,36,.35); }
+  .rpt-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.14); }
+  table.rpt { width:100%; border-collapse:collapse; font-size:15px; }
+  table.rpt th { position:sticky; top:0; z-index:1; text-align:left; padding:9px 12px;
+                 font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
+                 color:#cbd5e1; background:#0f1a33; border-bottom:1px solid rgba(255,255,255,.18); }
+  table.rpt td { padding:9px 12px; vertical-align:top; color:#e2e8f0;
+                 border-bottom:1px solid rgba(255,255,255,.07); }
+  table.rpt tr.day td { padding:10px 12px; font-size:13px; font-weight:900; letter-spacing:1.4px;
+                        text-transform:uppercase; color:#f8fafc;
+                        background:linear-gradient(90deg, color-mix(in srgb, var(--pc) 26%, transparent), rgba(255,255,255,.03));
+                        border-left:4px solid var(--pc); }
+  table.rpt tr.day td .dt { float:right; font-size:11.5px; letter-spacing:.6px; color:#cbd5e1; }
+  table.rpt tr.none td { color:#64748b; font-style:italic; font-size:13px; }
+  table.rpt td.tm { width:92px; white-space:nowrap; font-weight:800; color:#cbd5e1; }
+  table.rpt td.pt { width:58px; text-align:right; font-weight:900; white-space:nowrap; }
+  table.rpt td.st { width:210px; }
+  table.rpt .rsub { display:block; margin-top:2px; font-size:11.5px; font-weight:600; color:#94a3b8; }
+  table.rpt .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px;
+                    font-weight:900; letter-spacing:.3px; white-space:nowrap; }
+  .pill.ok { color:#052e16; background:#4ade80; }
+  .pill.drop { color:#451a03; background:#fbbf24; }
+  .pill.open { color:#e2e8f0; background:rgba(148,163,184,.35); }
+  .pill.back { color:#450a0a; background:#f87171; }
+  table.rpt tr.miss td.jb { color:#fde68a; }
+  table.rpt tr.ret td.jb { color:#fecaca; }
+  @media (max-width:640px){
+    .rpt-week { margin-left:0; }
+    table.rpt { font-size:13.5px; }
+    table.rpt td.tm { width:70px; } table.rpt td.st { width:auto; }
+  }
 </style>
 </head>
 <body>
@@ -823,6 +1060,17 @@
     <div class="club-sign small" id="jobTitle">CHORE</div>
     <div class="entry-msg" id="jobSub"></div>
     <div id="jobBody"></div>
+  </div>
+</div>
+
+<div id="dishpop" class="casino-ov">
+  <div class="club dishbox">
+    <div class="dishico">🍽️</div>
+    <div class="dishsign">THE DISHWASHER<br>IS DONE</div>
+    <div class="dishsub">The dishes are clean and ready to put away.</div>
+    <div class="dishwhen" id="dishWhen"></div>
+    <button class="dishaccept" onclick="acceptDishwasher()">CLICK HERE TO ACCEPT THIS JOB</button>
+    <button class="dishlater" onclick="laterDishwasher()">Not right now</button>
   </div>
 </div>
 
@@ -960,7 +1208,46 @@ async function load(){
   try { D = await api('/chores'); } catch(e){
     document.getElementById('app').innerHTML='<div id="msg">Chores service unavailable.</div>'; return; }
   render();
+  checkDishwasher();
 }
+
+// ---- dishwasher-done alert -------------------------------------------------
+// The flag is written by HA (shell_command.dishwasher_ready_set) when
+// timer.dishwasher finishes. /local/ is unauthenticated, so this is a plain
+// same-origin fetch with no token - and the file holds only a boolean.
+const DISH_FLAG  = '/local/dishwasher_ready.json';
+const DISH_ACK   = '/api/webhook/dishwasher-accepted-7f3a91c4e8';
+const DISH_CHORE = 59;              // "Empty dishwasher" on the board
+let DISH_SNOOZED = false;           // 'Not right now' holds until a reload
+
+async function checkDishwasher(){
+  if (DISH_SNOOZED) return;
+  let d;
+  try {
+    const r = await fetch(DISH_FLAG + '?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;
+    d = await r.json();
+  } catch(e){ return; }            // flag missing or unreadable: stay quiet
+  if (!d || !d.ready) { document.getElementById('dishpop').classList.remove('show'); return; }
+  const w = document.getElementById('dishWhen');
+  if (w) w.textContent = d.at ? 'Finished ' + new Date(d.at).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+  document.getElementById('dishpop').classList.add('show');
+}
+
+function laterDishwasher(){
+  DISH_SNOOZED = true;              // flag stays set, so it returns on reload
+  document.getElementById('dishpop').classList.remove('show');
+}
+
+async function acceptDishwasher(){
+  // Clear the flag first so a slow chore load can't leave the popup up.
+  try { await fetch(DISH_ACK, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}); }
+  catch(e){ DISH_SNOOZED = true; } // webhook unreachable: at least stop nagging
+  document.getElementById('dishpop').classList.remove('show');
+  if (D && (D.chores||[]).some(c => c.id === DISH_CHORE)) openChore(DISH_CHORE);
+  else alert('Marked done, but the "Empty dishwasher" job is not on the board right now.');
+}
+
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 const WHO_LABEL = {ian:'IAN', evan:'EVAN', dad:'DAD', mom:'MOM ❤️', na:'ANYONE'};
 const WHO_COLOR = {ian:'#2dd4bf', evan:'#fbbf24', dad:'#a855f7', mom:'#f472b6', na:'#64748b'};
@@ -1115,14 +1402,27 @@ function showPts(pts){
       + '</div>'
       + '<div class="ptrow-pts">' + (parseInt(c.points)||0) + '</div>'
       + '<div class="ptrow-act">'
-      +   '<button class="ian"  onclick="queueChore(' + c.id + ',&#39;ian&#39;); closePts();">Ian</button>'
-      +   '<button class="evan" onclick="queueChore(' + c.id + ',&#39;evan&#39;); closePts();">Evan</button>'
+      +   ptBtn(c.id, 'ian',  'Ian',  held)
+      +   ptBtn(c.id, 'evan', 'Evan', held)
       + '</div></div>';
   }).join('') || '<div class="empty">Nothing here.</div>';
 
   document.getElementById('ptfilter').classList.add('show');
 }
 
+// A kid who already holds an open claim cannot claim it again - the API returns
+// 409. Rendering a live button there produced a click that looked broken, so show
+// the assignment instead of offering it.
+function ptBtn(choreId, kid, label, held){
+  var mine = (held || []).some(function(x){ return x.kid === kid; });
+  if (mine) {
+    return '<button class="' + kid + '" disabled '
+         + 'style="opacity:.5;cursor:default" '
+         + 'title="Already in ' + label + '\u2019s queue">\u2713 ' + label + '</button>';
+  }
+  return '<button class="' + kid + '" onclick="queueChore(' + choreId
+       + ',&#39;' + kid + '&#39;); closePts();">' + label + '</button>';
+}
 function freqCls(f){
   return String(f || 'weekly').replace('-','').replace(/^2day$/, 'twoday');
 }
@@ -1165,8 +1465,165 @@ function pickQueue(k){ QUEUE_WHO = (QUEUE_WHO === k) ? null : k; render(); }
 
 // Which tab is showing. Lives outside render() because render() rebuilds the
 // whole board on every poll and would otherwise snap back to the default.
-let TAB = 'board';
-function setTab(t){ TAB = t; render(); }
+let TAB = null;                 // null = landing page, no module open
+function setTab(t){ TAB = (TAB === t) ? null : t; render(); }
+function closeTab(){ TAB = null; render(); }
+
+// ---- PRIOR WEEK REPORT ------------------------------------------------------
+// Closed weeks come from /chores/history. Fetched each time the report opens
+// rather than on the 45s board poll: a closed week does not change.
+let HIST = null, HIST_ERR = '', RPT_WHO = 'ian', RPT_IDX = null;
+const RPT_PEOPLE = {ian:['Ian','#2dd4bf'], evan:['Evan','#fbbf24'], parent:['Parent','#d8b4fe']};
+async function openReport(){
+  if (TAB === 'report') { closeTab(); return; }
+  TAB = 'report'; render();
+  try { HIST = await api('/chores/history'); HIST_ERR = ''; }
+  catch(e){ HIST_ERR = 'Could not load past weeks from the chores service.'; }
+  const L = ((HIST || {}).history || []).length;
+  if (RPT_IDX === null || RPT_IDX >= L) RPT_IDX = L - 1;
+  render();
+}
+function rptWho(k){ RPT_WHO = k; render(); }
+function rptStep(n){
+  const L = ((HIST || {}).history || []).length;
+  if (!L) return;
+  RPT_IDX = Math.max(0, Math.min(L - 1, RPT_IDX + n)); render();
+}
+// "Oct 5 – 11" for the Monday a week starts on
+function rptRange(ws){
+  if (!ws) return '';
+  const a = new Date(ws + 'T12:00:00'), b = new Date(a.getTime() + 6 * 864e5);
+  const m = d => d.toLocaleDateString([], {month:'short'});
+  return m(a) + ' ' + a.getDate() + ' – ' + (m(a) === m(b) ? '' : m(b) + ' ') + b.getDate();
+}
+// The Monday before the current board week: what "prior week" means on the tile.
+function rptPriorStart(){
+  if (!D || !D.week_start) return '';
+  const d = new Date(D.week_start + 'T12:00:00');
+  d.setDate(d.getDate() - 7);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// Timestamps are stored with their local offset, so the date and clock time can
+// be read straight off the string - no timezone conversion to get wrong.
+function rptClock(iso){
+  if (!iso || iso.length < 16) return '';
+  let h = parseInt(iso.slice(11,13), 10); const mi = iso.slice(14,16);
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  return h + ':' + mi + ' ' + ap;
+}
+function rptDayShort(ymd){
+  if (!ymd) return '';
+  return new Date(ymd + 'T12:00:00').toLocaleDateString([], {weekday:'short'});
+}
+function reportHtml(){
+  const who = RPT_WHO, P = RPT_PEOPLE[who];
+  let h = '<div class="panel"><div class="pbody">';
+  h += '<div class="rpt-top"><div class="rpt-who">'
+     + Object.keys(RPT_PEOPLE).map(k =>
+         '<button style="--pc:' + RPT_PEOPLE[k][1] + '" class="' + (k === who ? 'on' : '') + '"'
+         + ' onclick="rptWho(&#39;' + k + '&#39;)">' + RPT_PEOPLE[k][0] + '</button>').join('')
+     + '</div>';
+  if (HIST_ERR) return h + '</div><div class="empty">' + esc(HIST_ERR) + '</div></div></div>';
+  if (!HIST) return h + '</div><div class="empty">Loading last week…</div></div></div>';
+  const weeks = HIST.history || [];
+  if (!weeks.length) return h + '</div><div class="empty">No week has closed yet.</div></div></div>';
+  const wk = weeks[RPT_IDX], ws = wk.week_start;
+  const last = RPT_IDX === weeks.length - 1;
+  h += '<div class="rpt-week">'
+     + '<button onclick="rptStep(-1)"' + (RPT_IDX ? '' : ' disabled') + '>◀ Older</button>'
+     + '<span class="wk"><small>' + (last ? 'Prior week' : 'Week of') + '</small>' + rptRange(ws) + '</span>'
+     + '<button onclick="rptStep(1)"' + (last ? ' disabled' : '') + '>Newer ▶</button>'
+     + '</div></div>';
+
+  // ---- rows: approved, not approved at the close, and sent back
+  const days = [];
+  for (let i = 0; i < 7; i++){
+    const d = new Date(ws + 'T12:00:00'); d.setDate(d.getDate() + i);
+    days.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+  const rows = [];
+  const add = (e, kind) => {
+    const t = e.done_at || e.approved_at || e.queued_at || e.at || '';
+    rows.push({e, kind, t, day: t ? t.slice(0,10) : (e.on || '')});
+  };
+  (wk.completed || []).filter(e => e.by === who).forEach(e => add(e, 'ok'));
+  (wk.unapproved || []).filter(e => e.by === who).forEach(e => add(e, e.state === 'done' ? 'drop' : 'open'));
+  const next = new Date(ws + 'T12:00:00'); next.setDate(next.getDate() + 7);
+  const nextYmd = next.getFullYear() + '-' + String(next.getMonth()+1).padStart(2,'0') + '-' + String(next.getDate()).padStart(2,'0');
+  (HIST.rejections || []).filter(r => r.kid === who && r.at && r.at.slice(0,10) >= ws && r.at.slice(0,10) < nextYmd)
+    .forEach(r => add({name: r.chore, points: r.points, at: r.at, comment: r.comment}, 'back'));
+  rows.sort((a, b) => (a.t || a.day + 'T99').localeCompare(b.t || b.day + 'T99'));
+
+  const ok = rows.filter(r => r.kind === 'ok'), drop = rows.filter(r => r.kind === 'drop'),
+        open = rows.filter(r => r.kind === 'open'), back = rows.filter(r => r.kind === 'back');
+  const pts = a => a.reduce((s, r) => s + (parseInt(r.e.points) || 0), 0);
+  const timed = (wk.completed || []).some(e => e.done_at || e.queued_at || e.on);
+  h += '<div class="rpt-sum">'
+     + '<div class="c ok"><b>' + ok.length + '</b><span>Approved jobs</span></div>'
+     + '<div class="c ok"><b>' + pts(ok) + '</b><span>Points banked</span></div>'
+     + '<div class="c ' + (drop.length ? 'warn' : '') + '"><b>' + drop.length + '</b><span>Done, never approved</span></div>'
+     + '<div class="c ' + (open.length ? 'warn' : '') + '"><b>' + open.length + '</b><span>Claimed, not finished</span></div>'
+     + '<div class="c ' + (back.length ? 'bad' : '') + '"><b>' + back.length + '</b><span>Sent back</span></div>'
+     + '</div>';
+  // Audit cross-check: the approved rows must add up to what the week banked.
+  const banked = parseInt(((wk.totals || {})[who]) || 0);
+  h += (pts(ok) === banked)
+     ? '<div class="rpt-check ok">✓ Matches the ' + banked + ' points ' + P[0] + ' banked for the week</div>'
+     : '<div class="rpt-check bad">⚠ Jobs add up to ' + pts(ok) + ' pts but the week banked ' + banked + ' pts for ' + P[0] + '</div>';
+  if (!timed)
+    h += '<div class="rpt-note">This week closed before the board kept day and time, so its jobs are listed without days. Every week from Oct 12, 2026 on is complete.</div>';
+  if (wk.backfilled)
+    h += '<div class="rpt-note">Times recovered from a backup taken Sunday 5:26 AM. Jobs claimed after that show on Sunday with no time.</div>';
+
+  const row = r => {
+    const e = r.e;
+    let tm = rptClock(r.t) || '—', st = '', sub = '';
+    if (r.kind === 'ok'){
+      st = '<span class="pill ok">✓ Approved</span>';
+      if (e.approved_at && e.approved_at !== e.done_at)
+        sub = 'approved ' + rptDayShort(e.approved_at.slice(0,10)) + ' ' + rptClock(e.approved_at);
+    } else if (r.kind === 'drop'){
+      st = '<span class="pill drop">⚠ Never approved</span>';
+      sub = 'dropped at the week close · no points';
+    } else if (r.kind === 'open'){
+      st = '<span class="pill open">… Not finished</span>';
+      sub = 'claimed ' + (rptClock(e.queued_at) || '') + ', never marked done';
+    } else {
+      st = '<span class="pill back">↩ Sent back</span>';
+      sub = e.comment ? '“' + esc(e.comment) + '”' : 'by a parent';
+    }
+    const claimed = (r.kind !== 'open' && e.queued_at && e.queued_at.slice(0,10) !== (r.t || '').slice(0,10))
+      ? '<span class="rsub">claimed ' + rptDayShort(e.queued_at.slice(0,10)) + ' ' + rptClock(e.queued_at) + '</span>' : '';
+    return '<tr class="' + (r.kind === 'drop' || r.kind === 'open' ? 'miss' : r.kind === 'back' ? 'ret' : '') + '">'
+      + '<td class="tm">' + tm + '</td>'
+      + '<td class="jb">' + esc(e.name || '') + claimed
+      +   (e.note ? '<span class="rsub">' + esc(e.note) + '</span>' : '') + '</td>'
+      + '<td class="pt">' + (parseInt(e.points) || 0) + '</td>'
+      + '<td class="st">' + st + (sub ? '<span class="rsub">' + sub + '</span>' : '') + '</td></tr>';
+  };
+  const dayHead = (label, list) => {
+    const a = list.filter(r => r.kind === 'ok');
+    return '<tr class="day" style="--pc:' + P[1] + '"><td colspan="4">' + label
+      + '<span class="dt">' + (a.length ? a.length + ' approved · ' + pts(a) + ' pts' : '') + '</span></td></tr>';
+  };
+  h += '<div class="rpt-wrap"><table class="rpt"><thead><tr>'
+     + '<th>Finished</th><th>Job</th><th style="text-align:right">Pts</th><th>Status</th></tr></thead><tbody>';
+  days.forEach(ymd => {
+    const list = rows.filter(r => r.day === ymd);
+    const d = new Date(ymd + 'T12:00:00');
+    h += dayHead(d.toLocaleDateString([], {weekday:'long'}) + ' · '
+                 + d.toLocaleDateString([], {month:'short', day:'numeric'}), list);
+    h += list.length ? list.map(row).join('')
+                     : '<tr class="none"><td colspan="4">Nothing logged</td></tr>';
+  });
+  const undated = rows.filter(r => !days.includes(r.day));
+  if (undated.length) h += dayHead('Day not recorded', undated) + undated.map(row).join('');
+  h += '</tbody></table></div></div></div>';
+  return h;
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && TAB) closeTab();
+});
 
 function render(){
   const t = D.target || 100, tot = D.totals || {ian:0,evan:0};
@@ -1177,13 +1634,53 @@ function render(){
   const sc = (k, label, colour) =>
     '<span class="s" style="color:' + colour + '">' + label
     + ' <b>' + (tot[k] || 0) + '</b>' + pendTagH(k) + '</span>';
-  let html = '<div class="hdr"><div class="title">⭐ Chores &amp; Points</div>'
-    + '<div class="score">' + sc('ian','Ian','#2dd4bf') + sc('evan','Evan','#fbbf24')
-    +   sc('parent','Parents','#d8b4fe') + '</div>'
-    + '<button class="btn blue" onclick="openForm()">+ Add Chore</button>'
-    + '<button class="btn ghost" onclick="adhocChore()">🎯 Ad-Hoc</button>'
-    + '<button class="btn ghost" onclick="openCasino()">🎰 Casino</button>'
-    + '<button class="btn ghost" onclick="newWeek()">↻ New Week</button></div>'
+  // ---- HERO: title + artwork. "Add Chore" is gone - chores come from the
+  // spreadsheet now - and Ad-Hoc / Casino moved down into the main menu.
+  const ART =
+    '<svg class="jbart" viewBox="0 0 120 96" aria-hidden="true">'
+    + '<defs>'
+    +   '<filter id="jbglow"><feGaussianBlur stdDeviation="2.4" result="b"/>'
+    +     '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+    +   '<linearGradient id="jbg" x1="0" y1="0" x2="1" y2="1">'
+    +     '<stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/>'
+    +   '</linearGradient>'
+    + '</defs>'
+    + '<g filter="url(#jbglow)" fill="none" stroke="url(#jbg)" stroke-width="3.2"'
+    +   ' stroke-linecap="round" stroke-linejoin="round">'
+    +   '<rect x="22" y="15" width="64" height="73" rx="8"/>'
+    +   '<path d="M44 15v-4a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v4z" fill="rgba(34,211,238,.28)"/>'
+    +   '<path d="M36 41l8 8 16-18"/><path d="M36 63h40"/><path d="M36 75h26"/>'
+    + '</g>'
+    + '<g fill="#fbbf24" filter="url(#jbglow)">'
+    +   '<path d="M99 20l2.7 5.7 6.2.8-4.6 4.3 1.2 6.1-5.5-3-5.5 3 1.2-6.1-4.6-4.3 6.2-.8z"/>'
+    + '</g>'
+    + '</svg>';
+
+  // ---- STATUS BOX: points + jobs completed, one card per person
+  const RGB = {ian:'45,212,191', evan:'251,191,36', parent:'216,180,254'};
+  const doneCount = k => (((D.log || {})[k]) || []).length;
+  const statCell = (k, label) => {
+    const pp = (D.pending || {})[k] || 0;
+    const n  = doneCount(k);
+    return '<div class="jbs" style="--pcr:' + RGB[k] + '">'
+      + '<span class="who">' + label + '</span>'
+      + '<span class="num">' + (tot[k] || 0) + '</span><span class="u">PTS</span>'
+      + (pp ? '<span class="pend">+' + pp + '</span>' : '')
+      + '<span class="jobs">Jobs completed <b>' + n + '</b></span>'
+      + '</div>';
+  };
+
+  let html = '<div class="jbhero">'
+    + '<div class="jbhero-in"><div>'
+    + '<div class="jbtitle">JOB BOARD</div>'
+    + '<div class="jbsub">Our Family \u00b7 POINTS</div>'
+    + '</div>' + ART
+    + '<button class="btn ghost jbnew" onclick="newWeek()">\u21bb New Week</button>'
+    + '</div>'
+    + '<div class="jbstrip">'
+    +   statCell('ian', 'Ian') + statCell('evan', 'Evan') + statCell('parent', 'Parents')
+    + '</div>'
+    + '</div>'
     + formHtml();
 
   const all = D.chores || [];
@@ -1375,17 +1872,69 @@ function render(){
   const totalDone = ((D.log||{}).ian||[]).length + ((D.log||{}).evan||[]).length
                   + ((D.log||{}).parent||[]).length;
   const qTotal = qIan.length + qEvan.length + qParent.length + pend.length;
+  // ---- MAIN MENU: six colour-coded modules. Four switch tabs; One Time and
+  // Casino fire their overlay straight from here instead of the old header.
+  const MODS = {
+    board:     {rgb:'56,189,248',  g1:'56,189,248',  g2:'2,110,190',  icon:'📋', label:'Open Jobs Board',
+                note:'tap a job to put it in your queue'},
+    queue:     {rgb:'45,212,191',  g1:'45,212,191',  g2:'13,130,120', icon:'🧺', label:'Jobs In Your Queue',
+                note:'what you have claimed and still owe'},
+    approvals: {rgb:'251,191,36',  g1:'251,191,36',  g2:'176,80,10',  icon:'\u23f3', label:'Awaiting Approval',
+                note:'done, waiting on a parent code'},
+    done:      {rgb:'216,180,254', g1:'167,139,250', g2:'103,40,215', icon:'\u2705', label:'Jobs Done',
+                note:'banked this week \u00b7 resets Monday'},
+    report:    {rgb:'52,211,153',  g1:'52,211,153',  g2:'4,120,87',   icon:'\ud83d\udcca', label:'Prior Week Report',
+                note:'Monday to Sunday audit'}
+  };
   {
-    const tb = (id, icon, label, n, colour) =>
-      '<button class="tab' + (TAB === id ? ' on' : '') + '" style="--tc:' + colour + '"'
-      + ' onclick="setTab(&#39;' + id + '&#39;)">' + icon + ' ' + label
-      + '<span class="cnt' + (n ? '' : ' zero') + '">' + n + '</span></button>';
-    html += '<div class="tabs">'
-         +   tb('board',     '📋', 'Board',     board.length,    '#38bdf8')
-         +   tb('queue',     '🧺', 'Queue',     qTotal,          '#2dd4bf')
-         +   tb('approvals', '⏳', 'Approvals', awaiting.length, '#fbbf24')
-         +   tb('done',      '✅', 'Done',      totalDone,       '#d8b4fe')
+    const tab = (id, n) => {
+      const m = MODS[id];
+      return '<button class="jbtab' + (TAB === id ? ' on' : '') + '"'
+        + ' style="--mcr:' + m.rgb + ';--g1:' + m.g1 + ';--g2:' + m.g2 + '"'
+        + ' onclick="setTab(&#39;' + id + '&#39;)">'
+        + '<span class="ti">' + m.icon + '</span>'
+        + '<span class="tl">' + m.label + '</span>'
+        + '<span class="tn' + (n ? '' : ' zero') + '">' + n + '</span></button>';
+    };
+    const act = (rgb, g1, g2, icon, label, fn) =>
+      '<button class="jbtab act"'
+      + ' style="--mcr:' + rgb + ';--g1:' + g1 + ';--g2:' + g2 + '"'
+      + ' onclick="' + fn + '">'
+      + '<span class="ti">' + icon + '</span>'
+      + '<span class="tl">' + label + '</span></button>';
+
+    html += '<div class="jbtabs">'
+         +   tab('board', board.length)
+         +   tab('queue', qTotal)
+         +   tab('approvals', awaiting.length)
+         +   tab('done', totalDone)
+         +   act('249,115,22', '251,146,60', '190,62,10', '🎯', 'One Time/Special Jobs', 'adhocChore()')
+         +   act('232,121,249', '232,121,249', '158,26,170', '🎰', 'Chore Casino', 'openCasino()')
+         +   '<button class="jbtab jbreport' + (TAB === 'report' ? ' on' : '') + '"'
+         +     ' style="--mcr:' + MODS.report.rgb + ';--g1:' + MODS.report.g1 + ';--g2:' + MODS.report.g2 + '"'
+         +     ' onclick="openReport()">'
+         +     '<span class="ti">' + MODS.report.icon + '</span>'
+         +     '<span class="tl">' + MODS.report.label + '</span>'
+         +     '<span class="tn">' + rptRange(rptPriorStart()) + '</span></button>'
          + '</div>';
+
+    // Everything the active module renders lives inside this wrapper, so the
+    // module's colour carries through its banner, borders and panels.
+    const m = MODS[TAB] || MODS.board;
+    const counts = {board: board.length, queue: qTotal,
+                    approvals: awaiting.length, done: totalDone};
+    if (TAB) {
+      html += '<div class="modov" style="--mcr:' + m.rgb + '">'
+           +  '<div class="modov-head">'
+           +    '<span class="mo-icon">' + m.icon + '</span>'
+           +    '<span class="mo-title">' + m.label + '</span>'
+           +    '<span class="mo-note">' + (TAB === 'report'
+                                 ? m.note + ' \u00b7 ' + RPT_PEOPLE[RPT_WHO][0]
+                                 : (counts[TAB] || 0) + ' \u00b7 ' + m.note) + '</span>'
+           +    '<button class="modov-x" onclick="closeTab()" aria-label="Close">&#10005;</button>'
+           +  '</div>'
+           +  '<div class="modov-body">';
+    }
   }
 
   // ---- DONE TAB
@@ -1449,30 +1998,40 @@ function render(){
     if (QUEUE_WHO === 'parent') html += parentPanel();
   }
 
-  // Ad-Hoc and Casino are header buttons now - they were a full-width bar and
-  // a marquee slab sitting in the middle of the workflow.
+  // One Time/Special Jobs and the Casino are main-menu modules now. They were
+  // a full-width bar and a marquee slab sitting in the middle of the workflow.
 
   // ===== one full-width column: approvals, then the board =====
 
 
   // --- AWAITING APPROVAL: sits above everything until a parent clears it ---
+  if (TAB === 'approvals' && !awaiting.length){
+    html += '<div class="panel"><div class="pbody">'
+         +  '<div class="empty">Nothing is waiting on a parent right now. '
+         +  'Jobs land here after a kid marks them done.</div>'
+         +  '</div></div>';
+  }
   if (TAB === 'approvals' && awaiting.length){
     const ap = awaiting.slice()
       .sort((a,b) => String(doneTime(b)||'').localeCompare(String(doneTime(a)||'')));
     const apPts = ap.reduce((s,c)=>s+(parseInt(c.points)||0),0);
-    html += '<div class="panel awaitp"><div class="phead">⏳ Awaiting Further Approval'
+    html += '<div class="panel awaitp"><div class="phead">🔒 Parent Sign-Off Needed'
          + '<span class="note">' + ap.length + ' waiting · ' + apPts + ' pts pending · parent code required</span>'
          + '</div><div class="pbody">'
          + '<div class="awaitnote">Points are already banked. A parent accepts to file it under '
          + 'the kid’s completed jobs, or rejects to claw the points back.</div>'
+         + '<div class="claim approveallwrap">'
+         +   '<button class="approve approveall" onclick="approveAllChores()">'
+         +     '✅ Accept All ' + ap.length + ' · ' + apPts + ' pts</button>'
+         + '</div>'
          + grid(ap.map(awaitCard))
          + '</div></div>';
   }
 
   // ---- BOARD TAB
   if (TAB === 'board') {
-  html += '<div class="panel"><div class="phead">📋 Job Board'
-       + '<span class="note">' + board.length + ' open · tap a job to queue it</span></div>'
+  html += '<div class="panel"><div class="phead">🏠 Jobs By Room'
+       + '<span class="note">every job, grouped by where it happens</span></div>'
        + '<div class="pbody">';
 
   // --- filter by point value: one button per value that's actually on the board
@@ -1555,6 +2114,9 @@ function render(){
   html += '</div></div>';
   }
 
+  // ---- PRIOR WEEK REPORT
+  if (TAB === 'report') html += reportHtml();
+
   // --- RESTING panel: chores not due until later.
   // (Completed jobs now live under each kid's column on the right.)
   if (later.length){
@@ -1591,6 +2153,13 @@ function render(){
     + '<button class="btn ghost" onclick="setSheet()">Spreadsheet link…</button>'
     + '</div>';
 
+  if (TAB) {
+    html += '</div>'                       // close .modov-body
+         +  '<button class="modov-back" onclick="closeTab()">'
+         +    '<span class="mb-arrow">&#8592;</span> Back to Job Board'
+         +  '</button>'
+         +  '</div>';                      // close .modov
+  }
   document.getElementById('app').innerHTML = html;
 }
 
@@ -2074,6 +2643,41 @@ async function approveChore(id){
   await load();
 }
 
+// Accept every job waiting on a parent in one go. The add-on has no bulk
+// endpoint (/chores/approve_all is a 404), so this loops /chores/approve one id
+// at a time. Sequential on purpose: firing 20 parallel POSTs at the add-on is a
+// good way to lose some of them silently, and a partial approval that LOOKS
+// complete is worse than a slow one. The parent code is asked ONCE.
+async function approveAllChores(){
+  const pend = (D.claims||[]).filter(c => c.state === 'done');
+  if (!pend.length){ alert('Nothing is waiting on a parent right now.'); return; }
+  const pts = pend.reduce((s,c)=>s+(parseInt(c.points)||0),0);
+  const ok = await askCode({title:'✅ Parent Code',
+    sub:'Accept <b>all ' + pend.length + '</b> waiting jobs? '
+      + pts + ' ' + LED + ' stay with the kids and every one is filed as done.'
+      + '<br><br>Reject anything that should be sent back <b>before</b> doing this '
+      + '- accepting is not undone one at a time.',
+    accent:'#22c55e', validate:pin=>pin===PARENT_CODE});
+  if (!ok) return;
+
+  const btn = document.querySelector('.approveall');
+  if (btn){ btn.disabled = true; btn.textContent = 'Accepting 0/' + pend.length + '...'; }
+
+  const failed = [];
+  let done = 0;
+  for (const c of pend){
+    try { await api('/chores/approve', {id: c.id}); }
+    catch(e){ failed.push((c.name || ('#' + c.id)) + ' - ' + (e.detail || e.status)); }
+    done++;
+    if (btn) btn.textContent = 'Accepting ' + done + '/' + pend.length + '...';
+  }
+  await load();
+  if (failed.length){
+    alert('Accepted ' + (pend.length - failed.length) + ' of ' + pend.length
+      + '.\n\nThese failed and are still waiting:\n' + failed.join('\n'));
+  }
+}
+
 async function reassign(id, to){
   const c = (D.chores||[]).find(x=>x.id===id) || {};
   const label = to === 'ian' ? 'Ian' : to === 'evan' ? 'Evan' : 'the open board';
@@ -2104,8 +2708,27 @@ function toggleQ(ev, el){
   if (ev.target.closest('.qdetail')) return;
   el.classList.toggle('open');
 }
+// The board builds every queue from D.claims. /chores/adhoc, /chores/assign and
+// /chores/queue only set queued_for on the chore, which nothing renders - so a
+// job "assigned" that way silently stayed in the open pool. /chores/claim is what
+// actually creates the queue row, so every assignment path calls this after.
+async function ensureClaim(id, kid){
+  if (!kid || kid === 'na') return true;
+  try { await api('/chores/claim', {id, kid}); return true; }
+  catch(e){
+    if (e.status === 409) {              // already in that kid's queue
+      alert('That job is already in ' + (PICK_LABEL[kid]||kid) + '\u2019s queue.');
+      return true;
+    }
+    alert('Assigned, but it did not reach that queue: ' + (e.detail||e.status));
+    return false;
+  }
+}
 async function queueChore(id, kid){
-  try { await api('/chores/queue', {id, kid}); }
+  try {
+    if (kid === 'na') { await api('/chores/queue', {id, kid}); }
+    else { await ensureClaim(id, kid); }
+  }
   catch(e){ alert('Could not move that job: ' + (e.detail||e.status)); }
   await load();
 }
@@ -2132,6 +2755,7 @@ async function assignNotify(id){
   if (!kid) return;
   try {
     const r = await api('/chores/assign', {id, kid});
+    await ensureClaim(id, kid);
     const who = PICK_LABEL[kid];
     alert(r.sms ? '📣 Assigned — text sent to ' + who + '!'
                 : 'Assigned to ' + who + ' — texting is not configured yet.');
@@ -2156,6 +2780,7 @@ async function adhocChore(){
       + (desc.trim() ? '\n' + desc.trim() : '') + '\n' + points + ' pts\n\nThey get a text now.')) return;
   try {
     const r = await api('/chores/adhoc', {name:name.trim(), description:desc.trim(), points, kid});
+    await ensureClaim(r.id, kid);
     alert(r.sms ? '🎯 Added to ' + who + '’s queue — text sent!'
                 : 'Added to ' + who + '’s queue — texting is not configured yet.');
   } catch(e){ alert('Could not add: ' + (e.detail||e.status)); }
