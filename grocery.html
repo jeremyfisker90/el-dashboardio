@@ -68,11 +68,80 @@
 <body>
 <div id="app"><div id="msg">Loading lists…</div></div>
 <script>
-// Over https (wall tablet via the SSL proxy) the add-on is reached same-origin
-// at /cozi so it isn't blocked as mixed content; over http, hit it directly.
-const API = location.protocol === 'https:'
+// On the LAN the add-on is hit directly on :5000. Over https - the wall tablet
+// behind the SSL proxy, and phones away from home through Nabu Casa - :5000 is
+// unreachable AND mixed-content blocked, so calls go through /cozi
+// (custom_components/cozi_bridge), which sits behind HA's login. Same scheme as
+// chores.html: the page is same-origin with the HA frontend, so the signed-in
+// user's token is in localStorage.hassTokens; refreshed on a 401, never written back.
+let API = location.protocol === 'https:'
   ? location.origin + '/cozi'
   : 'http://' + location.hostname + ':5000';
+const API_FALLBACK = location.protocol === 'https:'
+  ? location.origin + '/cozi'
+  : 'http://YOUR_HA_IP:5000';   // LAN address, for PCs browsing HA by another name
+const viaHA = () => API.endsWith('/cozi');
+let HA_TOKEN = null, HA_TOKEN_EXP = 0;
+function haStored(){
+  try { return JSON.parse(localStorage.getItem('hassTokens') || 'null'); }
+  catch(e){ return null; }
+}
+// The companion app keeps its login out of localStorage (external auth), so first
+// borrow the session of the HA frontend that hosts this iframe.
+function parentAuth(){
+  try {
+    const ha = window.parent !== window && window.parent.document.querySelector('home-assistant');
+    return (ha && ha.hass && ha.hass.auth) || null;
+  } catch(e){ return null; }
+}
+function haToken(){
+  const a = parentAuth();
+  if (a && a.accessToken && !a.expired) return a.accessToken;
+  if (HA_TOKEN && HA_TOKEN_EXP > Date.now() + 30000) return HA_TOKEN;
+  const t = haStored();
+  if (t && t.access_token && t.expires > Date.now() + 30000){
+    HA_TOKEN = t.access_token; HA_TOKEN_EXP = t.expires;
+  }
+  return HA_TOKEN;
+}
+async function haRefresh(){
+  const a = parentAuth();
+  if (a){
+    try { await a.refreshAccessToken(); return a.accessToken; } catch(e){}
+  }
+  const t = haStored();
+  if (!t || !t.refresh_token) return null;
+  try {
+    const r = await fetch('/auth/token', {method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({grant_type:'refresh_token',
+                                 refresh_token:t.refresh_token, client_id:t.clientId})});
+    if (!r.ok) return null;
+    const j = await r.json();
+    HA_TOKEN = j.access_token;
+    HA_TOKEN_EXP = Date.now() + ((j.expires_in || 1800) * 1000);
+    return HA_TOKEN;
+  } catch(e){ return null; }
+}
+// fetch() against the add-on, with the HA token attached when going through /cozi.
+async function rawApi(path, opt, retried){
+  opt = Object.assign({}, opt || {});
+  opt.headers = Object.assign({}, opt.headers || {});
+  if (viaHA()){
+    const tk = haToken();
+    if (tk) opt.headers['Authorization'] = 'Bearer ' + tk;
+  }
+  let r;
+  try { r = await fetch(API + path, opt); }
+  catch(e){
+    if (API === API_FALLBACK) throw e;
+    API = API_FALLBACK;                              // hostname:5000 unreachable -> try the LAN IP
+    return rawApi(path, opt, retried);
+  }
+  if (r.status === 401 && viaHA() && !retried && await haRefresh())
+    return rawApi(path, opt, true);
+  return r;
+}
 // Which shopping lists to feature at the top of the picker (case-insensitive). Others still show after.
 const FEATURED = ['kroger','costco',"home depot/lowe's"];
 // Store-brand logo chips (SVGs in /local/logos/). A list can carry several logos
@@ -91,9 +160,9 @@ let LISTS = [];
 
 async function api(path, body, _retried){
   const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
-  const r = await fetch(API + path, opt);
+  const r = await rawApi(path, opt);
   if (r.status === 503 && !_retried){                 // session expired -> silently reconnect + retry once
-    try { await fetch(API + '/relogin', {method:'POST'}); } catch(e){}
+    try { await rawApi('/relogin', {method:'POST'}); } catch(e){}
     return api(path, body, true);
   }
   if (r.status === 503) throw 'auth';

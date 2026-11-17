@@ -509,6 +509,10 @@
   .keypad button:active { background:rgba(255,213,74,.3); }
   .keypad button.enter { grid-column:span 3; background:linear-gradient(180deg,#fde047,#f59e0b); color:#1a0b02;
     font-size:18px; letter-spacing:2px; box-shadow:0 5px 0 #b45309; }
+  /* Keys fire on pointerdown (see wireKeypad), so stop the browser treating taps as pans/zooms */
+  .keypad { touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+  .keypad button { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  .keypad button.hit { background:rgba(255,213,74,.35); transform:scale(.95); }
 
   .wallet { font-size:26px; font-weight:900; color:#fde047; margin:10px 0 4px;
     text-shadow:0 0 14px rgba(250,204,21,.6); }
@@ -795,6 +799,7 @@
   .jobrow.is-req   { border-left-color:#ff9a6b; }
   .jobrow.is-opt   { border-left-color:#5fe0c6; }
   .jr-name { flex:1; font-size:18px; font-weight:800; line-height:1.25; }
+  .jr-min  { flex:none; font-size:13px; font-weight:800; color:#93c5fd; white-space:nowrap; }
   .jr-pts  { flex:none; font-size:20px; font-weight:900; color:#ffd76e; }
 
   /* ---- the chore popup ---- */
@@ -877,6 +882,9 @@
   .jbs .jobs { margin-left:auto; font-size:11.5px; font-weight:800;
                letter-spacing:.4px; color:#cbd5e1; }
   .jbs .jobs b { color:rgb(var(--pcr)); }
+  .jbs { flex-wrap:wrap; }
+  .jbs .cash { flex:1 1 100%; font-size:12px; font-weight:800; letter-spacing:.3px; color:#86efac; }
+  .jbs .cash b { color:#bbf7d0; font-size:14px; }
 
   /* ---- main menu: six big buttons, 3 across x 2 rows ---- */
   .jbtabs { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:0 0 16px; }
@@ -1178,18 +1186,60 @@
   </div>
 </div>
 <script>
-// Over https (wall tablet via the SSL proxy) the add-on is same-origin at /cozi
-// (direct :5000 would be mixed-content blocked); over http, hit it directly.
+// On the LAN the add-on is hit directly on :5000. Over https - the wall tablet
+// behind the SSL proxy, and anyone away from home coming in through Nabu Casa -
+// :5000 is unreachable AND mixed-content blocked, so the board goes through
+// /cozi, which custom_components/cozi_bridge serves from inside HA.
 let API = location.protocol === 'https:'
   ? location.origin + '/cozi'
   : 'http://' + location.hostname + ':5000';
 const API_FALLBACK = location.protocol === 'https:'
   ? location.origin + '/cozi'
   : 'http://YOUR_HA_IP:5000';   // LAN address, for PCs browsing HA by another name
+const viaHA = () => API.endsWith('/cozi');
+
+// /cozi sits behind HA's login, so it needs a bearer token. This page is
+// same-origin with the HA frontend, so the logged-in user's token is already in
+// localStorage. Kept in a local copy and refreshed from the stored refresh_token
+// on a 401: writing back over hassTokens would fight whichever dashboard tab
+// owns it.
+let HA_TOKEN = null, HA_TOKEN_EXP = 0;
+function haStored(){
+  try { return JSON.parse(localStorage.getItem('hassTokens') || 'null'); }
+  catch(e){ return null; }
+}
+function haToken(){
+  if (HA_TOKEN && HA_TOKEN_EXP > Date.now() + 30000) return HA_TOKEN;
+  const t = haStored();
+  if (t && t.access_token && t.expires > Date.now() + 30000){
+    HA_TOKEN = t.access_token; HA_TOKEN_EXP = t.expires;
+  }
+  return HA_TOKEN;
+}
+async function haRefresh(){
+  const t = haStored();
+  if (!t || !t.refresh_token) return null;
+  try {
+    const r = await fetch('/auth/token', {method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({grant_type:'refresh_token',
+                                 refresh_token:t.refresh_token, client_id:t.clientId})});
+    if (!r.ok) return null;
+    const j = await r.json();
+    HA_TOKEN = j.access_token;
+    HA_TOKEN_EXP = Date.now() + ((j.expires_in || 1800) * 1000);
+    return HA_TOKEN;
+  } catch(e){ return null; }
+}
 let D = null, editingId = null, formKind = 'required', formFreq = 'weekly', formWho = 'na';
 
-async function api(path, body){
-  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+async function api(path, body, retried){
+  const headers = body ? {'Content-Type':'application/json'} : {};
+  if (viaHA()){
+    const tk = haToken();
+    if (tk) headers['Authorization'] = 'Bearer ' + tk;
+  }
+  const opt = body ? {method:'POST', headers, body:JSON.stringify(body)} : {headers};
   let r;
   try { r = await fetch(API + path, opt); }
   catch(e){
@@ -1197,6 +1247,8 @@ async function api(path, body){
     API = API_FALLBACK;                              // hostname:5000 unreachable -> try the LAN IP
     r = await fetch(API + path, opt);
   }
+  if (r.status === 401 && viaHA() && !retried && await haRefresh())
+    return api(path, body, true);
   if (!r.ok) {
     let detail = '';
     try { detail = (await r.json()).detail || ''; } catch(e){}
@@ -1206,7 +1258,13 @@ async function api(path, body){
 }
 async function load(){
   try { D = await api('/chores'); } catch(e){
-    document.getElementById('app').innerHTML='<div id="msg">Chores service unavailable.</div>'; return; }
+    // "unavailable" used to cover both the add-on being down and simply not
+    // being signed in to HA, which are fixed in completely different places.
+    const signedOut = viaHA() && (e.status === 401 || (!haToken() && !haStored()));
+    document.getElementById('app').innerHTML = signedOut
+      ? '<div id="msg">Sign in to Home Assistant first, then reload this page.</div>'
+      : '<div id="msg">Chores service unavailable.</div>';
+    return; }
   render();
   checkDishwasher();
 }
@@ -1331,6 +1389,7 @@ function openChore(id){
   document.getElementById('jobTitle').innerHTML = esc(c.name);
   document.getElementById('jobSub').innerHTML =
     (parseInt(c.points)||0) + ' ' + LED
+    + (parseInt(c.minutes) ? ' · ⏱ ' + fmtMin(c.minutes) : '')
     + (c.room ? ' · ' + esc(canonRoom(c.room)) : '')
     + ' · ' + (c.kind === 'optional' ? 'Optional' : 'Required');
 
@@ -1556,7 +1615,10 @@ function reportHtml(){
 
   const ok = rows.filter(r => r.kind === 'ok'), drop = rows.filter(r => r.kind === 'drop'),
         open = rows.filter(r => r.kind === 'open'), back = rows.filter(r => r.kind === 'back');
-  const pts = a => a.reduce((s, r) => s + (parseInt(r.e.points) || 0), 0);
+  // jobs paid by the minute after 100 banked no points
+  const pts = a => a.reduce((s, r) => s + (r.e.paid_minutes ? 0 : (parseInt(r.e.points) || 0)), 0);
+  const earned = (wk.earnings || {})[who] || null;
+  const wkRate = wk.pay_per_hour || 25;
   const timed = (wk.completed || []).some(e => e.done_at || e.queued_at || e.on);
   h += '<div class="rpt-sum">'
      + '<div class="c ok"><b>' + ok.length + '</b><span>Approved jobs</span></div>'
@@ -1564,10 +1626,15 @@ function reportHtml(){
      + '<div class="c ' + (drop.length ? 'warn' : '') + '"><b>' + drop.length + '</b><span>Done, never approved</span></div>'
      + '<div class="c ' + (open.length ? 'warn' : '') + '"><b>' + open.length + '</b><span>Claimed, not finished</span></div>'
      + '<div class="c ' + (back.length ? 'bad' : '') + '"><b>' + back.length + '</b><span>Sent back</span></div>'
+     + (earned ? '<div class="c ok"><b>' + (fmtMin(earned.minutes) || '0 min') + '</b><span>Paid time after 100</span></div>'
+               + '<div class="c ok"><b>' + fmtCash(earned.pay) + '</b><span>Cash earned</span></div>' : '')
      + '</div>';
   // Audit cross-check: the approved rows must add up to what the week banked.
   const banked = parseInt(((wk.totals || {})[who]) || 0);
-  h += (pts(ok) === banked)
+  h += (earned && earned.capped)
+     ? '<div class="rpt-check ok">✓ ' + P[0] + ' hit 100, then ' + (fmtMin(earned.minutes) || '0 min')
+       + ' of paid jobs at $' + wkRate + '/hr = ' + fmtCash(earned.pay) + '</div>'
+     : (pts(ok) === banked)
      ? '<div class="rpt-check ok">✓ Matches the ' + banked + ' points ' + P[0] + ' banked for the week</div>'
      : '<div class="rpt-check bad">⚠ Jobs add up to ' + pts(ok) + ' pts but the week banked ' + banked + ' pts for ' + P[0] + '</div>';
   if (!timed)
@@ -1579,7 +1646,9 @@ function reportHtml(){
     const e = r.e;
     let tm = rptClock(r.t) || '—', st = '', sub = '';
     if (r.kind === 'ok'){
-      st = '<span class="pill ok">✓ Approved</span>';
+      st = e.paid_minutes
+        ? '<span class="pill ok">💵 ' + fmtCash((parseInt(e.minutes) || 0) * wkRate / 60) + '</span>'
+        : '<span class="pill ok">✓ Approved</span>';
       if (e.approved_at && e.approved_at !== e.done_at)
         sub = 'approved ' + rptDayShort(e.approved_at.slice(0,10)) + ' ' + rptClock(e.approved_at);
     } else if (r.kind === 'drop'){
@@ -1598,7 +1667,7 @@ function reportHtml(){
       + '<td class="tm">' + tm + '</td>'
       + '<td class="jb">' + esc(e.name || '') + claimed
       +   (e.note ? '<span class="rsub">' + esc(e.note) + '</span>' : '') + '</td>'
-      + '<td class="pt">' + (parseInt(e.points) || 0) + '</td>'
+      + '<td class="pt">' + (e.paid_minutes ? '⏱' + (parseInt(e.minutes) || 0) : (parseInt(e.points) || 0)) + '</td>'
       + '<td class="st">' + st + (sub ? '<span class="rsub">' + sub + '</span>' : '') + '</td></tr>';
   };
   const dayHead = (label, list) => {
@@ -1660,13 +1729,26 @@ function render(){
   const RGB = {ian:'45,212,191', evan:'251,191,36', parent:'216,180,254'};
   const doneCount = k => (((D.log || {})[k]) || []).length;
   const statCell = (k, label) => {
-    const pp = (D.pending || {})[k] || 0;
+    let pp = (D.pending || {})[k] || 0;
     const n  = doneCount(k);
+    const er = ((D.earnings || {})[k]) || null;
+    // past 100, work waiting on a parent is time owed, not points
+    if (er && er.capped){
+      const wm = (D.claims || []).filter(c => c.kid === k && c.state === 'done')
+                   .reduce((s, c) => s + claimMin(c), 0);
+      pp = wm ? fmtMin(wm) : 0;
+    }
+    const cash = er && er.capped
+      ? '<span class="cash">✓ Hit ' + (D.target || 100) + ' · paid by the hour now · '
+        + (er.minutes ? fmtMin(er.minutes) + ' = <b>' + fmtCash(er.pay) + '</b>' : '<b>$0.00</b> so far')
+        + '</span>'
+      : '';
     return '<div class="jbs" style="--pcr:' + RGB[k] + '">'
       + '<span class="who">' + label + '</span>'
       + '<span class="num">' + (tot[k] || 0) + '</span><span class="u">PTS</span>'
       + (pp ? '<span class="pend">+' + pp + '</span>' : '')
       + '<span class="jobs">Jobs completed <b>' + n + '</b></span>'
+      + cash
       + '</div>';
   };
 
@@ -1797,8 +1879,7 @@ function render(){
       + '<span class="badge">' + c.points + ' pts</span></div>'
       + '<div class="donestamp">🕒 ' + esc(stamp(doneTime(c)) || '') + '</div>'
       + '<div class="claim" style="margin-top:7px">'
-      + '<button class="undo" onclick="unclaim(' + c.id + ')">undo</button>'
-      + '<button class="rejbtn" onclick="reject(' + c.id + ')">↩ Reject</button></div>'
+      + '<button class="undo" onclick="voidClaim(' + c.id + ')">↩ undo &amp; unbank</button></div>'
       + '</div>';
   };
 
@@ -1813,9 +1894,16 @@ function render(){
       + '<span class="qname">' + esc(e.name || '') + '</span>'
       + (day ? '<span class="donepill" style="color:' + col + ';border-color:' + col
                + '">' + day + '</span>' : '')
-      + '<span class="badge">' + (parseInt(e.points)||0) + ' pts</span></div>'
+      + '<span class="badge">' + bankBadge(e) + '</span></div>'
       + '</div>';
   };
+  // A job finished after the kid hit 100 paid by the minute, not in points.
+  const PAID = paidClaims();
+  function bankBadge(e){
+    if (e.claim_id == null || !PAID.has(e.claim_id)) return (parseInt(e.points)||0) + ' pts';
+    const m = claimMin((D.claims || []).find(c => c.id === e.claim_id) || {chore_id: e.chore_id});
+    return m ? fmtMin(m) + ' · ' + fmtCash(m * payRate() / 60) : 'no time set · $0';
+  }
 
   const kidPanel = (k, label) => {
     const val = tot[k] || 0;
@@ -2096,6 +2184,7 @@ function render(){
           const rowsOf = (list, cls) => list.map(c =>
             '<button class="jobrow ' + cls + '" onclick="openChore(' + c.id + ')">'
             + '<span class="jr-name">' + esc(c.name) + '</span>'
+            + (parseInt(c.minutes) ? '<span class="jr-min">⏱ ' + fmtMin(c.minutes) + '</span>' : '')
             + '<span class="jr-pts">' + (parseInt(c.points)||0) + '</span>'
             + '</button>').join('');
           html += '<div class="roombody">'
@@ -2246,6 +2335,21 @@ async function delChore(id){ if(!confirm('Delete this chore?')) return;
   try { await api('/chores/delete',{id}); } catch(e){}
   await load(); }
 const CLAIM_CODES = {ian:'1111', evan:'2222'};  // change these!
+// Time per job (the sheet's "Time" column) and pay after 100 (add-on 2.5.0):
+// once a kid reaches 100 points, every job after that pays its minutes at
+// pay_per_hour instead of adding points.
+function fmtMin(m){ m = parseInt(m) || 0; if (!m) return '';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h ? h + ' hr' + (r ? ' ' + r + ' min' : '') : r + ' min'; }
+function fmtCash(v){ return '$' + (Number(v) || 0).toFixed(2); }
+function payRate(){ return (D && D.pay_per_hour) || 25; }
+function claimMin(cl){
+  if (cl && cl.minutes != null) return parseInt(cl.minutes) || 0;
+  const c = (D.chores || []).find(x => x.id === (cl || {}).chore_id);
+  return c ? (parseInt(c.minutes) || 0) : 0; }
+function paidClaims(){ const s = new Set();
+  Object.values((D && D.earnings) || {}).forEach(e => (e.paid_claims || []).forEach(i => s.add(i)));
+  return s; }
 const PARENT_CODE = '0000';  // change this!
 
 /* ===== Shared code keypad (claim / reject / all parent actions) ===== */
@@ -2257,18 +2361,15 @@ function askCode(opts){
     const sub = document.getElementById('cpSub'); sub.innerHTML = opts.sub || 'Enter your code'; sub.classList.remove('deny');
     document.getElementById('cpPin').value = '';
     document.querySelector('.codepad-box').style.borderColor = opts.accent || '#ffd54a';
-    const keys=['1','2','3','4','5','6','7','8','9','C','0','⌫','ENTER'];
-    document.getElementById('cpKeypad').innerHTML = keys.map(k=>{
-      if(k==='ENTER') return '<button class="enter" onclick="cpEnter()">ENTER ✓</button>';
-      if(k==='⌫') return '<button onclick="cpKey(\'del\')">⌫</button>';
-      if(k==='C')  return '<button onclick="cpKey(\'clr\')">C</button>';
-      return '<button onclick="cpKey(\''+k+'\')">'+k+'</button>';
-    }).join('');
+    const pad = document.getElementById('cpKeypad');
+    pad.innerHTML = keypadHTML('ENTER ✓');
+    wireKeypad(pad, k=>{ if(k==='ENTER') cpEnter(); else cpKey(k); });
     document.getElementById('codepad').classList.add('show');
   });
 }
 function cpKey(k){ const inp=document.getElementById('cpPin');
-  if(k==='del') inp.value=inp.value.slice(0,-1); else if(k==='clr') inp.value=''; else if(inp.value.length<6) inp.value+=k; }
+  if(k==='del') inp.value=inp.value.slice(0,-1); else if(k==='clr') inp.value=''; else if(inp.value.length<6) inp.value+=k;
+  if(_cpValidate && _cpValidate(inp.value)) cpEnter(); }   // right code goes straight through, no ENTER
 function cpEnter(){
   const pin=(document.getElementById('cpPin').value||'').trim();
   if(_cpValidate && _cpValidate(pin)){ codepadClose(); const r=_cpResolve; _cpResolve=null; if(r) r(true); }
@@ -2278,6 +2379,37 @@ function cpEnter(){
 }
 function codepadClose(){ document.getElementById('codepad').classList.remove('show'); }
 function codepadCancel(){ codepadClose(); const r=_cpResolve; _cpResolve=null; if(r) r(false); }
+
+/* Keypads act on pointerdown, not click. A click is dropped when the finger drifts a
+   few px (the box scrolls, so it reads as a pan) or the next key is pressed before the
+   last one lifts, which made code entry on the tablet feel picky. */
+function keypadHTML(enterLabel){
+  return ['1','2','3','4','5','6','7','8','9','C','0','⌫','ENTER'].map(k=>
+    '<button type="button" data-k="'+k+'"'+(k==='ENTER'?' class="enter">'+enterLabel:'>'+k)+'</button>').join('');
+}
+function wireKeypad(pad, onKey){
+  if(pad._wired) { pad._onKey = onKey; return; }
+  pad._wired = true; pad._onKey = onKey;
+  pad.addEventListener('pointerdown', e=>{
+    const b = e.target.closest('button[data-k]'); if(!b) return;
+    e.preventDefault();
+    b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'), 120);
+    const k = b.dataset.k;
+    pad._onKey(k==='⌫' ? 'del' : k==='C' ? 'clr' : k);
+  });
+}
+// A hardware keyboard works too, on whichever keypad is showing.
+document.addEventListener('keydown', e=>{
+  const pad = document.getElementById('codepad').classList.contains('show') ? document.getElementById('cpKeypad')
+            : (document.getElementById('casino').classList.contains('show') && document.getElementById('scr-entry').style.display!=='none')
+              ? document.getElementById('keypad') : null;
+  if(!pad || !pad._onKey) return;
+  const k = /^[0-9]$/.test(e.key) ? e.key : e.key==='Backspace' ? 'del' : e.key==='Enter' ? 'ENTER' : e.key==='Escape' ? 'ESC' : null;
+  if(!k) return;
+  e.preventDefault();
+  if(k==='ESC') { if(pad.id==='cpKeypad') codepadCancel(); else leaveCasino(); return; }
+  pad._onKey(k);
+});
 
 /* ===== The Chore Casino (code-gated club: Slots + Lucky Wheel) ===== */
 const SYMS = ['🍒','🍋','💎','🔔','⭐','7️⃣'];
@@ -2311,18 +2443,15 @@ function enterDemo(){
 function leaveCasino(){ document.getElementById('casino').classList.remove('show'); }
 
 function buildKeypad(){
-  const keys=['1','2','3','4','5','6','7','8','9','C','0','⌫','ENTER'];
-  document.getElementById('keypad').innerHTML = keys.map(k=>{
-    if(k==='ENTER') return '<button class="enter" onclick="enterClub()">ENTER 🎟️</button>';
-    if(k==='⌫') return '<button onclick="keyPin(\'del\')">⌫</button>';
-    if(k==='C')  return '<button onclick="keyPin(\'clr\')">C</button>';
-    return '<button onclick="keyPin(\''+k+'\')">'+k+'</button>';
-  }).join('');
+  const pad = document.getElementById('keypad');
+  pad.innerHTML = keypadHTML('ENTER 🎟️');
+  wireKeypad(pad, k=>{ if(k==='ENTER') enterClub(); else keyPin(k); });
 }
 function keyPin(k){ const inp=document.getElementById('entryPin');
   if(k==='del') inp.value=inp.value.slice(0,-1);
   else if(k==='clr') inp.value='';
-  else if(inp.value.length<6) inp.value+=k; }
+  else if(inp.value.length<6) inp.value+=k;
+  if(Object.values(CLAIM_CODES).includes(inp.value)) enterClub(); }
 function enterClub(){
   const pin=(document.getElementById('entryPin').value||'').trim();
   let kid=null; for(const k in CLAIM_CODES){ if(CLAIM_CODES[k]===pin) kid=k; }
@@ -2762,28 +2891,60 @@ async function assignNotify(id){
   } catch(e){ alert('Could not assign: ' + (e.detail||e.status)); }
   await load();
 }
-// Parent-only: create a one-off chore, drop it in a kid's queue, text them.
+// Parent-only: log a one-off job and bank it in one move. These are jobs that
+// already happened, so there is no queue, no Done tap and no sign-off - the
+// add-on writes an approved claim straight away. Deliberately does NOT call
+// ensureClaim(): there is no chore behind an approved one-off, and claiming it
+// would put a second, open claim in the kid's queue for work already paid for.
 async function adhocChore(){
-  const ok = await askCode({title:'🎯 Parent Code', sub:'Add a one-off ad-hoc chore', accent:'#a855f7', validate:pin=>pin===PARENT_CODE});
+  const ok = await askCode({title:'🎯 Parent Code', sub:'Log a one-off job and approve it now', accent:'#a855f7', validate:pin=>pin===PARENT_CODE});
   if(!ok) return;
-  const name = prompt('Chore name and description:');
+  const name = prompt('Job name:');
   if (name === null || !name.trim()) return;
-  const desc = prompt('Description / instructions (optional):') || '';
-  const ptsRaw = prompt('Points for this chore:', '10');
+  const desc = prompt('Description / what they did (optional):') || '';
+  const ptsRaw = prompt('Points for this job:', '10');
   if (ptsRaw === null) return;
   const points = parseInt(ptsRaw, 10);
   if (isNaN(points)){ alert('Enter a number of points'); return; }
+  const minRaw = prompt('Minutes it took (pays $' + payRate() + '/hr once they are past '
+                        + (D.target || 100) + ' pts):', '0');
+  if (minRaw === null) return;
+  const minutes = Math.max(0, parseInt(minRaw, 10) || 0);
   const kid = pickAssignee();
   if (!kid) return;
   const who = PICK_LABEL[kid];
-  if (!confirm('Add ad-hoc chore for ' + who + '?\n\n' + name.trim()
-      + (desc.trim() ? '\n' + desc.trim() : '') + '\n' + points + ' pts\n\nThey get a text now.')) return;
+  if (!confirm('Credit ' + who + ' for this job right now?\n\n' + name.trim()
+      + (desc.trim() ? '\n' + desc.trim() : '') + '\n' + points + ' pts'
+      + (minutes ? ' · ' + fmtMin(minutes) : '') + '\n\n'
+      + 'Approved and banked immediately — it never hits a queue.')) return;
   try {
-    const r = await api('/chores/adhoc', {name:name.trim(), description:desc.trim(), points, kid});
-    await ensureClaim(r.id, kid);
-    alert(r.sms ? '🎯 Added to ' + who + '’s queue — text sent!'
-                : 'Added to ' + who + '’s queue — texting is not configured yet.');
+    const r = await api('/chores/adhoc', {name:name.trim(), description:desc.trim(), points, minutes, kid});
+    if (r.approved === false){
+      // add-on older than 2.4.0 queued it instead, so finish the old way
+      await ensureClaim(r.id, kid);
+      alert('Added to ' + who + '’s queue — this add-on is too old to close a job '
+            + 'out (needs 2.4.0).');
+    } else {
+      alert('✅ ' + points + ' pts banked for ' + who + ' — job closed out.'
+            + (r.sms ? '' : '\n\nNotifications are not configured yet.'));
+    }
   } catch(e){ alert('Could not add: ' + (e.detail||e.status)); }
+  await load();
+}
+
+// Parents only: take back an approved job and unbank its points. Points live in
+// two places once signed off - the claim and the weekly log - so this goes
+// through /chores/void, which clears both. The old undo called /chores/unclaim
+// and Reject called /chores/reject; neither accepts an approved claim, so both
+// buttons on a completed card had never done anything.
+async function voidClaim(id){
+  const c = (D.claims||[]).find(x=>x.id===id) || {};
+  const ok = await askCode({title:'↩ Parent Code',
+    sub:'Undo <b>'+esc(c.name||'this job')+'</b> and take back '+(c.points||0)+' pts?',
+    accent:'#f87171', validate:pin=>pin===PARENT_CODE});
+  if(!ok) return;
+  try { await api('/chores/void', {id}); }
+  catch(e){ alert('Could not undo: ' + (e.detail||e.status)); }
   await load();
 }
 // A kid finishing sends the claim to the parent queue. A parent finishing

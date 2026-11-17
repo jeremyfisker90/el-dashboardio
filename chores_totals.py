@@ -23,6 +23,8 @@ PLACEHOLDER = {
     "total_ian": 0, "total_evan": 0, "total_weeks": 1,
     "pending": 0, "queued_ian": 0, "queued_evan": 0,
     "awaiting": 0, "awaiting_pts": 0, "awaiting_list": [], "unfinished": 0,
+    "min_ian": 0, "min_evan": 0, "pay_ian": 0, "pay_evan": 0,
+    "capped_ian": False, "capped_evan": False, "pay_per_hour": 25,
 }
 
 
@@ -116,6 +118,14 @@ def main():
                                                  c.get("name", "?"), int(c.get("points", 0)))
                                 for c in wait]
         out["unfinished"] = len(queued)
+        # Past 100 points a job pays its minutes at pay_per_hour (add-on 2.5.0).
+        earn = d.get("earnings") or {}
+        for k in ("ian", "evan"):
+            e = earn.get(k) or {}
+            out["min_" + k] = int(e.get("minutes", 0))
+            out["pay_" + k] = float(e.get("pay", 0))
+            out["capped_" + k] = bool(e.get("capped", False))
+        out["pay_per_hour"] = d.get("pay_per_hour", 25)
         out["leader"] = ("ian" if out["ian"] > out["evan"]
                          else "evan" if out["evan"] > out["ian"] else "")
         sk, sw, hi, he, hw, last = hist_stats()
